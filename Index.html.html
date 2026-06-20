@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Cetak Data Klub, Official & Pemain - Pro Studio</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .font-mono-tech {
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        /* Aturan Cetak PDF Super-Robust */
+        #printingAreaContainer {
+            display: none;
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                display: block !important;
+            }
+            /* Sembunyikan seluruh elemen dashboard secara mutlak */
+            body > *:not(#printingAreaContainer) {
+                display: none !important;
+            }
+            
+            /* Tampilkan area cetak dengan prioritas penuh */
+            #printingAreaContainer {
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: white !important;
+                color: black !important;
+            }
+
+            .page-break {
+                page-break-after: always;
+                break-after: page;
+            }
+            
+            @page {
+                size: auto;
+                margin: 10mm 10mm 10mm 10mm;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+
+    <!-- NAVIGATION BAR -->
+    <header class="no-print bg-slate-900 text-white sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-emerald-500 p-2 rounded-lg text-slate-900">
+                        <i data-lucide="printer" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-tight">SI-CETAK SPORT PRO</h1>
+                        <p class="text-[10px] text-emerald-400 font-medium">Klub, Official & Pemain Manager</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="hidden md:flex items-center bg-slate-800 px-3 py-1.5 rounded-md text-xs border border-slate-700">
+                        <span id="headerConnectionIndicator" class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>
+                        <span class="text-slate-300 font-medium">Sheet ID: <span class="font-mono text-slate-400" id="headerSheetIdDisplay">Loading...</span></span>
+                    </div>
+                    <button onclick="toggleConfigModal()" class="text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-xs flex items-center space-x-1 transition-colors">
+                        <i data-lucide="settings" class="w-4 h-4"></i>
+                        <span>Pengaturan Sheet</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN APP WRAPPER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 no-print">
+        
+        <!-- STATUS / ALERT BANNER -->
+        <div id="connectionAlert" class="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-start space-x-3">
+                <div class="bg-amber-100 text-amber-800 p-2 rounded-lg mt-0.5 sm:mt-0">
+                    <i data-lucide="info" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-sm text-amber-900" id="alertTitle">Menggunakan Data Simulasi (Offline)</h3>
+                    <p class="text-xs text-amber-700 mt-0.5" id="alertDesc">Spreadsheet terdeteksi belum sinkron. Klik "Hubungkan Otomatis" atau gunakan tombol <b>"Tempel Data Manual"</b> jika koneksi diblokir oleh browser.</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="openPasteModal()" class="text-xs font-semibold bg-blue-900 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors flex items-center gap-1">
+                    <i data-lucide="clipboard-paste" class="w-3.5 h-3.5"></i>
+                    <span>Tempel Data Manual</span>
+                </button>
+                <button onclick="loadAllData()" class="text-xs font-semibold bg-emerald-900 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">
+                    Hubungkan Otomatis
+                </button>
+            </div>
+        </div>
+
+        <!-- SUCCESS TOAST BANNER -->
+        <div id="toastNotification" class="hidden mb-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between transition-all">
+            <div class="flex items-center space-x-3 text-emerald-800">
+                <div class="bg-emerald-100 p-2 rounded-lg">
+                    <i data-lucide="check-circle" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-sm" id="toastTitle">Sinkronisasi Berhasil!</h3>
+                    <p class="text-xs text-emerald-600 mt-0.5" id="toastDesc">Data terhubung langsung dengan Google Sheet Anda secara real-time.</p>
+                </div>
+            </div>
+            <button onclick="hideToast()" class="text-emerald-500 hover:text-emerald-800">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <!-- STATS & SHEET CONTROLLER CARD -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Data Fetcher Status -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-semibold">Sumber Google Sheet</span>
+                    <h2 class="text-xs font-bold text-slate-800 mt-1 truncate" id="sheetIdDisplay">Loading Sheet ID...</h2>
+                    <div class="mt-2 text-[10px] text-slate-500 flex items-center gap-1">
+                        <span id="connectionStatusDot" class="w-2 h-2 rounded-full bg-red-500"></span>
+                        <span id="connectionStatusText">Belum Terhubung</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <button onclick="openPasteModal()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] py-2 px-2 rounded-lg flex items-center justify-center space-x-1 shadow-sm transition-all">
+                        <i data-lucide="clipboard-paste" class="w-3.5 h-3.5"></i>
+                        <span>Tempel Data</span>
+                    </button>
+                    <button id="btnFetch" onclick="loadAllData()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] py-2 px-2 rounded-lg flex items-center justify-center space-x-1 shadow-sm transition-all">
+                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5" id="syncIcon"></i>
+                        <span>Hubungkan</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Klub -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Klub / SSB</span>
+                    <h3 id="statKlub" class="text-3xl font-extrabold text-slate-800 mt-1">-</h3>
+                    <p class="text-xs text-slate-500 mt-1">Terdaftar resmi</p>
+                </div>
+                <div class="bg-blue-50 text-blue-600 p-4 rounded-2xl">
+                    <i data-lucide="shield" class="w-8 h-8"></i>
+                </div>
+            </div>
+
+            <!-- Stats Official -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Official</span>
+                    <h3 id="statOfficial" class="text-3xl font-extrabold text-slate-800 mt-1">-</h3>
+                    <p class="text-xs text-slate-500 mt-1">Manajemen & Pelatih</p>
+                </div>
+                <div class="bg-purple-50 text-purple-600 p-4 rounded-2xl">
+                    <i data-lucide="briefcase" class="w-8 h-8"></i>
+                </div>
+            </div>
+
+            <!-- Stats Pemain -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Pemain</span>
+                    <h3 id="statPemain" class="text-3xl font-extrabold text-slate-800 mt-1">-</h3>
+                    <p class="text-xs text-slate-500 mt-1">Atlet terverifikasi</p>
+                </div>
+                <div class="bg-emerald-50 text-emerald-600 p-4 rounded-2xl">
+                    <i data-lucide="users" class="w-8 h-8"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- DATA VIEWER & PRINT STUDIO -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+            <!-- Tab Menu -->
+            <div class="bg-slate-900 border-b border-slate-800 px-6 py-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center space-x-1 overflow-x-auto py-1">
+                    <button onclick="switchTab('klub')" id="tab-klub" class="tab-btn px-4 py-2 text-xs font-semibold rounded-lg transition-all text-white bg-slate-800">
+                        <span class="flex items-center space-x-1.5">
+                            <i data-lucide="shield" class="w-3.5 h-3.5 text-blue-400"></i>
+                            <span id="tabLabelKlub">Daftar Klub</span>
+                        </span>
+                    </button>
+                    <button onclick="switchTab('official')" id="tab-official" class="tab-btn px-4 py-2 text-xs font-semibold rounded-lg transition-all text-slate-400 hover:text-white hover:bg-slate-800/50">
+                        <span class="flex items-center space-x-1.5">
+                            <i data-lucide="briefcase" class="w-3.5 h-3.5 text-purple-400"></i>
+                            <span id="tabLabelOfficial">Daftar Official</span>
+                        </span>
+                    </button>
+                    <button onclick="switchTab('pemain')" id="tab-pemain" class="tab-btn px-4 py-2 text-xs font-semibold rounded-lg transition-all text-slate-400 hover:text-white hover:bg-slate-800/50">
+                        <span class="flex items-center space-x-1.5">
+                            <i data-lucide="users" class="w-3.5 h-3.5 text-emerald-400"></i>
+                            <span id="tabLabelPemain">Daftar Pemain</span>
+                        </span>
+                    </button>
+                </div>
+
+                <!-- Print Options Quick Access -->
+                <div class="flex items-center space-x-2">
+                    <button onclick="openPrintModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition-colors">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                        <span>Cetak Laporan</span>
+                    </button>
+                    <button onclick="openIdCardModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition-colors">
+                        <i data-lucide="contact-2" class="w-4 h-4"></i>
+                        <span>Desain & Cetak ID Card</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Toolbar (Filter, Search, Map Column) -->
+            <div class="p-5 border-b border-slate-100 bg-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex-1 flex flex-col sm:flex-row gap-3">
+                    <!-- Search Input -->
+                    <div class="relative flex-1">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
+                            <i data-lucide="search" class="w-4 h-4"></i>
+                        </span>
+                        <input id="searchInput" oninput="filterData()" type="text" placeholder="Cari data..." 
+                               class="w-full pl-9 pr-4 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                    </div>
+                    <!-- Filter Klub (Dinamis) -->
+                    <div id="klubFilterContainer" class="w-full sm:w-48">
+                        <select id="clubFilter" onchange="filterData()" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                            <option value="">Semua Klub / SSB</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-xs text-slate-500 flex items-center space-x-1">
+                    <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                    <span>Tampilkan <b id="displayedCount" class="text-slate-800">0</b> dari <b id="totalCount" class="text-slate-800">0</b> baris</span>
+                </div>
+            </div>
+
+            <!-- Loader Progress -->
+            <div id="loader" class="hidden py-24 flex flex-col items-center justify-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mb-4"></div>
+                <p class="text-sm font-semibold text-slate-600">Sedang menarik data dari Google Sheets...</p>
+                <p class="text-xs text-slate-400 mt-1">Harap tunggu beberapa saat.</p>
+            </div>
+
+            <!-- Error & Diagnostic State -->
+            <div id="errorState" class="hidden py-10 px-6 max-w-2xl mx-auto">
+                <div class="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+                    <div class="bg-red-100 text-red-600 p-3 rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-3">
+                        <i data-lucide="cloud-off" class="w-7 h-7"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-800">Koneksi Otomatis Google Sheet Terhambat</h3>
+                    <p class="text-xs text-slate-500 mt-1 leading-relaxed max-w-md mx-auto">Pencegahan CORS browser Anda memblokir koneksi langsung. Jangan khawatir! Gunakan tombol <b>Tempel Data Manual</b> di bawah ini untuk mengimpor data secara instan tanpa hambatan jaringan.</p>
+                    
+                    <div class="mt-5 flex justify-center gap-3">
+                        <button onclick="openPasteModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-lg flex items-center space-x-2 shadow">
+                            <i data-lucide="clipboard-paste" class="w-4 h-4"></i>
+                            <span>Gunakan Tempel Data Manual</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden py-24 text-center">
+                <div class="text-slate-300 mb-3 flex justify-center">
+                    <i data-lucide="database" class="w-16 h-16"></i>
+                </div>
+                <h3 class="text-sm font-bold text-slate-600">Tidak ada data ditemukan</h3>
+                <p class="text-xs text-slate-400 mt-1">Gunakan tombol Tempel Data Manual untuk memuat tabel.</p>
+            </div>
+
+            <!-- Table Wrapper -->
+            <div id="tableContainer" class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead id="tableHeader" class="bg-slate-100 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
+                        <!-- Header dinamis -->
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-200 text-slate-700">
+                        <!-- Isi data dinamis -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="no-print bg-slate-900 text-slate-400 text-xs py-8 border-t border-slate-800 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-2">
+                <div class="bg-slate-800 p-1.5 rounded text-emerald-500">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                </div>
+                <span class="font-bold text-white tracking-wide">SI-CETAK SPORT manager</span>
+            </div>
+            <p>© 2026 Aplikasi Cetak Klub Olahraga. Terintegrasi langsung dengan Google Sheets secara Real-Time.</p>
+        </div>
+    </footer>
+
+    <!-- MODAL 1: PENGATURAN & PETUNJUK GOOGLE SHEET -->
+    <div id="configModal" class="no-print fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+            <div class="bg-slate-900 text-white p-5 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="help-circle" class="w-5 h-5 text-emerald-400"></i>
+                    <h3 class="font-bold text-base">Konfigurasi Google Sheet Anda</h3>
+                </div>
+                <button onclick="toggleConfigModal()" class="text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto space-y-4 text-xs text-slate-600 leading-relaxed">
+                <!-- Panduan Singkat -->
+                <div class="space-y-2 bg-emerald-50 border border-emerald-100 p-4 rounded-xl text-emerald-900">
+                    <h4 class="font-bold text-emerald-950 flex items-center gap-1">
+                        <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i> Syarat Utama Koneksi Berhasil:
+                    </h4>
+                    <p class="text-[11px]">Buka spreadsheet Anda, klik tombol <b>Bagikan (Share)</b> di kanan atas, lalu ubah akses umum menjadi <b>"Siapa saja yang memiliki link dapat melihat"</b> (Anyone with the link can view).</p>
+                </div>
+
+                <div class="border-t border-slate-100 pt-3">
+                    <label class="block text-slate-700 font-bold mb-1">ID Spreadsheet Anda:</label>
+                    <input id="inputModalSheetId" type="text" class="w-full p-2.5 border border-slate-300 rounded-lg font-mono text-xs text-slate-800 focus:outline-emerald-500" value="">
+                    <p class="text-[10px] text-slate-400 mt-1">Ubah jika Anda ingin menggunakan spreadsheet yang berbeda.</p>
+                </div>
+
+                <!-- Custom Nama Tab -->
+                <div class="border-t border-slate-100 pt-3 space-y-3">
+                    <h4 class="font-bold text-slate-700 text-xs">Sesuaikan Nama Tab Spreadsheet (Case-Sensitive):</h4>
+                    <p class="text-[10px] text-slate-400">Ubah nama di bawah ini jika nama tab di spreadsheet Anda tidak menggunakan bahasa Indonesia baku.</p>
+                    
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 font-semibold mb-1">Tab Klub</label>
+                            <input id="tabNameKlubInput" type="text" value="Klub" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono focus:outline-emerald-500" placeholder="Klub">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 font-semibold mb-1">Tab Official</label>
+                            <input id="tabNameOfficialInput" type="text" value="Official" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono focus:outline-emerald-500" placeholder="Official">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 font-semibold mb-1">Tab Pemain</label>
+                            <input id="tabNamePemainInput" type="text" value="Pemain" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono focus:outline-emerald-500" placeholder="Pemain">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button onclick="toggleConfigModal()" class="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold transition-all">Batal</button>
+                <button onclick="saveAndReloadSheet()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm transition-all">Simpan & Hubungkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PENYELAMAT: PASTE DATA MANUAL (COPY-PASTE) -->
+    <div id="pasteModal" class="no-print fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+            <div class="bg-blue-900 text-white p-5 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="clipboard-paste" class="w-5 h-5 text-blue-300"></i>
+                    <h3 class="font-bold text-base">Metode Tempel Data Manual (100% Berhasil)</h3>
+                </div>
+                <button onclick="closePasteModal()" class="text-slate-300 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto space-y-4 text-xs text-slate-600 leading-relaxed">
+                <!-- Petunjuk visual -->
+                <div class="space-y-2 bg-slate-100 border border-slate-200 p-4 rounded-xl text-slate-700">
+                    <h4 class="font-bold text-slate-900 flex items-center gap-1">
+                        <i data-lucide="info" class="w-4 h-4 text-blue-600"></i> Cara Menyalin dari Google Sheets:
+                    </h4>
+                    <ol class="list-decimal pl-4 space-y-1 text-[11px]">
+                        <li>Buka spreadsheet Google Sheets Anda.</li>
+                        <li>Buka tab <b id="pasteTargetTab">Klub</b>.</li>
+                        <li>Tekan <kbd class="px-1 py-0.5 bg-white border rounded font-mono">Ctrl + A</kbd> (pilih seluruh sel) kemudian tekan <kbd class="px-1 py-0.5 bg-white border rounded font-mono">Ctrl + C</kbd> (salin).</li>
+                        <li>Kembali ke aplikasi ini, dan tempel/paste (<kbd class="px-1 py-0.5 bg-white border rounded font-mono">Ctrl + V</kbd>) ke dalam kotak besar di bawah.</li>
+                    </ol>
+                </div>
+
+                <div>
+                    <label class="block text-slate-800 font-bold mb-2 flex items-center justify-between">
+                        <span>Pilih Tab Tujuan Tempel Data:</span>
+                        <div class="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5" id="pasteTabSelector">
+                            <button onclick="setPasteTargetTab('klub')" id="pasteTabBtn-klub" class="px-3 py-1 text-[10px] font-bold rounded-md bg-white text-slate-800 shadow-sm">Klub</button>
+                            <button onclick="setPasteTargetTab('official')" id="pasteTabBtn-official" class="px-3 py-1 text-[10px] font-bold rounded-md text-slate-600 hover:text-slate-800">Official</button>
+                            <button onclick="setPasteTargetTab('pemain')" id="pasteTabBtn-pemain" class="px-3 py-1 text-[10px] font-bold rounded-md text-slate-600 hover:text-slate-800">Pemain</button>
+                        </div>
+                    </label>
+                    <textarea id="pasteTextArea" rows="8" class="w-full p-3 border border-slate-300 rounded-lg font-mono text-[11px] focus:outline-blue-500 focus:border-blue-500" placeholder="Tempelkan hasil copy dari Google Sheet di sini..."></textarea>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button onclick="closePasteModal()" class="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold">Batal</button>
+                <button onclick="processPastedData()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm flex items-center gap-1">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    <span>Terapkan Data</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CETAK LAPORAN DENGAN BERBAGAI TEMPLATE -->
+    <div id="printModal" class="no-print fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+            <div class="bg-slate-900 text-white p-5 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="printer" class="w-5 h-5 text-emerald-400"></i>
+                    <h3 class="font-bold text-base">Pengaturan Cetak Dokumen</h3>
+                </div>
+                <button onclick="closePrintModal()" class="text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-6">
+                <!-- Pilihan Template Laporan -->
+                <div>
+                    <span class="text-xs font-bold text-slate-700 block mb-2">1. Pilih Format/Template Laporan</span>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="border border-slate-200 rounded-xl p-3 flex items-start space-x-2.5 cursor-pointer hover:bg-slate-50 transition-colors">
+                            <input type="radio" name="printTemplate" value="tabel" checked class="mt-0.5 text-emerald-600 focus:ring-emerald-500">
+                            <div>
+                                <h4 class="text-xs font-semibold text-slate-800">Tabel Daftar Lengkap</h4>
+                                <p class="text-[10px] text-slate-500 mt-0.5">Sesuai format tabel yang tampil di aplikasi saat ini.</p>
+                            </div>
+                        </label>
+                        <label class="border border-slate-200 rounded-xl p-3 flex items-start space-x-2.5 cursor-pointer hover:bg-slate-50 transition-colors">
+                            <input type="radio" name="printTemplate" value="kartu_tim" class="mt-0.5 text-emerald-600 focus:ring-emerald-500">
+                            <div>
+                                <h4 class="text-xs font-semibold text-slate-800">Formulir Roster Klub</h4>
+                                <p class="text-[10px] text-slate-500 mt-0.5">Rincian anggota per klub dengan Header formal kop surat.</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Opsi Kop Surat -->
+                <div class="space-y-3">
+                    <span class="text-xs font-bold text-slate-700 block">2. Atribut Kop Surat Laporan</span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] uppercase font-semibold text-slate-500 mb-1">Nama Instansi / Penyelenggara</label>
+                            <input id="printInstansi" type="text" value="ASOSIASI KABUPATEN PERSATUAN SEPAKBOLA SELURUH INDONESIA" class="w-full p-2 border border-slate-200 rounded-lg text-xs focus:outline-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase font-semibold text-slate-500 mb-1">Nama Turnamen / Acara</label>
+                            <input id="printTurnamen" type="text" value="Piala Bupati Cup Tahun 2026" class="w-full p-2 border border-slate-200 rounded-lg text-xs focus:outline-emerald-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Petunjuk Tambahan -->
+                <div class="bg-blue-50 text-blue-800 p-3.5 rounded-xl border border-blue-100 flex items-start space-x-2 text-[11px]">
+                    <i data-lucide="printer" class="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-600"></i>
+                    <div>
+                        <p class="font-semibold text-blue-950">Tips Pengaturan Cetak Browser:</p>
+                        <p class="mt-0.5">Saat jendela cetak browser terbuka, aktifkan opsi <b>"Cetak Background Grafis"</b> (Background graphics) untuk memunculkan warna-warna tabel & kartu secara maksimal, serta matikan Header/Footer browser jika ingin hasil cetak lebih bersih.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button onclick="closePrintModal()" class="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs transition-all">Batal</button>
+                <button onclick="triggerPrintDocument()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition-all flex items-center space-x-1">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                    <span>Buka Jendela Cetak</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: STUDIO DESAIN & CETAK ID CARD (PRO VERSION) -->
+    <div id="idCardModal" class="no-print fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 hidden">
+        <div class="bg-white rounded-2xl max-w-6xl w-full overflow-hidden shadow-2xl border border-slate-200 flex flex-col h-[95vh]">
+            <div class="bg-slate-900 text-white p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="bg-emerald-500 p-1.5 rounded-lg text-slate-900">
+                        <i data-lucide="contact-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm">Studio Desain & Cetak ID Card - Pro v2.5</h3>
+                        <p class="text-[10px] text-emerald-300">Pilih Template, Layout, Custom QR, dan Checklist Individu</p>
+                    </div>
+                </div>
+                <button onclick="closeIdCardModal()" class="text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-0">
+                
+                <!-- Panel 1: Konfigurasi Visual ID Card (Left, Lg: 4/12) -->
+                <div class="lg:col-span-4 p-4 bg-slate-50 border-r border-slate-200 overflow-y-auto space-y-4">
+                    <div class="border-b border-slate-200 pb-2">
+                        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="palette" class="w-4 h-4 text-emerald-500"></i> Desain Visual Kartu
+                        </h4>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Sumber Data</label>
+                            <select id="cardSourceType" onchange="onSourceTypeChange()" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white focus:outline-emerald-500 font-medium">
+                                <option value="pemain">Semua Pemain</option>
+                                <option value="official">Semua Official</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Filter Klub / SSB</label>
+                            <select id="cardClubFilter" onchange="onClubFilterChange()" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white focus:outline-emerald-500 font-medium">
+                                <option value="">Semua Klub</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Tema Desain</label>
+                            <select id="cardDesignTemplate" onchange="generateIdCardPreviews()" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white focus:outline-emerald-500 font-medium">
+                                <option value="gradient-wave">Modern Gradient</option>
+                                <option value="modern-solid">Solid Minimalis</option>
+                                <option value="retro-stripe">Retro Stripe</option>
+                                <option value="dark-futuristic">Dark Futuristic</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Bentuk Frame Foto</label>
+                            <select id="cardPhotoShape" onchange="generateIdCardPreviews()" class="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white focus:outline-emerald-500 font-medium">
+                                <option value="square">Kotak Rounded (Square)</option>
+                                <option value="circle">Bulat Sempurna (Circle)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Warna Dominan</label>
+                            <input id="cardThemeColor" type="color" value="#fbbf24" oninput="generateIdCardPreviews()" class="w-full h-8 p-1 bg-white border border-slate-300 rounded-lg cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Warna Teks Aksen</label>
+                            <input id="cardThemeText" type="color" value="#ffffff" oninput="generateIdCardPreviews()" class="w-full h-8 p-1 bg-white border border-slate-300 rounded-lg cursor-pointer">
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-200 pt-3 space-y-3">
+                        <label class="block text-[10px] font-bold text-slate-500">Atribut Info & Layout Tambahan</label>
+                        
+                        <div>
+                            <label class="block text-[9px] font-semibold text-slate-400 mb-0.5">Nama Organisasi / Event di Kartu</label>
+                            <input id="cardOrgName" type="text" value="GEAS INDONESIA" oninput="generateIdCardPreviews()" class="w-full p-2 border border-slate-300 rounded-lg text-xs focus:outline-emerald-500 font-bold">
+                        </div>
+
+                        <div class="space-y-2 bg-white p-3 rounded-xl border border-slate-200">
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" id="cardShowQrCode" onchange="generateIdCardPreviews()" checked class="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                                <span class="text-xs font-semibold text-slate-700">Tampilkan QR Code (Reg ID)</span>
+                            </label>
+                            
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" id="cardShowCutLines" checked class="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                                <span class="text-xs font-semibold text-slate-700">Tampilkan Garis Pandu Potong</span>
+                            </label>
+
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" id="cardPrintDoubleSided" class="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                                <span class="text-xs font-semibold text-slate-700">Cetak Belakang Kartu (Ketentuan)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel 2: Checklist Individu (Middle, Lg: 3/12) -->
+                <div class="lg:col-span-3 p-4 bg-white border-r border-slate-200 overflow-y-auto flex flex-col h-full">
+                    <div class="border-b border-slate-200 pb-2 mb-3 flex items-center justify-between">
+                        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="check-square" class="w-4 h-4 text-emerald-500"></i> Pilih Anggota
+                        </h4>
+                        <button onclick="toggleAllIndividualSelection(true)" class="text-[10px] text-blue-600 font-bold hover:underline">Pilih Semua</button>
+                    </div>
+
+                    <div class="mb-3 bg-slate-50 p-2 rounded-lg flex items-center justify-between">
+                        <span class="text-[10px] text-slate-500">Terpilih: <b id="selectedChecklistCount" class="text-slate-800">0</b></span>
+                        <button onclick="toggleAllIndividualSelection(false)" class="text-[10px] text-slate-400 font-medium hover:text-red-500">Hapus Semua</button>
+                    </div>
+
+                    <!-- List Container (Scroller) -->
+                    <div id="individualChecklistContainer" class="flex-1 overflow-y-auto space-y-1.5 pr-1">
+                        <!-- Checkbox list items render di sini secara dinamis -->
+                    </div>
+                </div>
+
+                <!-- Panel 3: Live Preview ID Card (Right, Lg: 5/12) -->
+                <div class="lg:col-span-5 p-4 flex flex-col bg-slate-100 overflow-y-auto h-full">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-2 mb-3">
+                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="eye" class="w-4 h-4 text-emerald-500"></i> Live Preview Hasil Cetak
+                        </h4>
+                        <span class="text-[10px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full"><b id="idCardCountPreview">0</b> Kartu</span>
+                    </div>
+
+                    <!-- Container Grid Preview ID Card -->
+                    <div id="idCardPreviewGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 justify-items-center">
+                        <!-- ID Card Preview Item (Render Dinamis) -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button onclick="closeIdCardModal()" class="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs transition-all">Batal</button>
+                <button id="btnPrintSelection" onclick="triggerPrintIdCards()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition-all flex items-center space-x-1">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                    <span>Cetak ID Card Terpilih</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTAINER KHUSUS UNTUK PROSES PRINTING (DOCK) -->
+    <div id="printingAreaContainer" class="print-area">
+        <!-- Konten cetak dinamis akan di-inject langsung di sini saat memanggil window.print() -->
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // State Management Global
+        let spreadsheetId = "1F0W0XP_mLLpMZdsSXZuJsWMMXFuzbpCURKv46EpvZaM";
+        let activeTab = "klub"; // klub | official | pemain
+        let pasteTargetTab = "klub"; // Target paste
+        let allData = {
+            klub: [],
+            official: [],
+            pemain: []
+        };
+        let filteredData = [];
+        let listClubs = [];
+
+        // Checklist pilihan ID Card individu (ID Unik Anggota -> boolean)
+        let selectedIdCardsMap = {};
+
+        // Konfigurasi Nama Tab Alternatif di-sheet (bisa disesuaikan oleh pengguna lewat modal)
+        let tabNamesMapping = {
+            klub: ["Klub", "klub", "Club", "CLUB", "Sheet1"],
+            official: ["Official", "official", "Official Tim", "OFFICIAL", "Sheet2"],
+            pemain: ["Pemain", "pemain", "Player", "PEMAIN", "Players", "Sheet3"]
+        };
+
+        // Window On Load - Setup awal
+        window.onload = function() {
+            lucide.createIcons();
+            
+            // Periksa ID Sheet & kustomisasi nama tab dari localStorage
+            const savedSheetId = localStorage.getItem("sheet_print_app_id");
+            if (savedSheetId) {
+                spreadsheetId = savedSheetId;
+            }
+            
+            const savedTabKlub = localStorage.getItem("sheet_tab_name_klub");
+            const savedTabOfficial = localStorage.getItem("sheet_tab_name_official");
+            const savedTabPemain = localStorage.getItem("sheet_tab_name_pemain");
+            
+            if (savedTabKlub) tabNamesMapping.klub.unshift(savedTabKlub);
+            if (savedTabOfficial) tabNamesMapping.official.unshift(savedTabOfficial);
+            if (savedTabPemain) tabNamesMapping.pemain.unshift(savedTabPemain);
+
+            // Set nilai-nilai form input sesuai setting aktif
+            const inputModalSheetIdEl = document.getElementById("inputModalSheetId");
+            if (inputModalSheetIdEl) inputModalSheetIdEl.value = spreadsheetId;
+            
+            document.getElementById("tabNameKlubInput").value = savedTabKlub || "Klub";
+            document.getElementById("tabNameOfficialInput").value = savedTabOfficial || "Official";
+            document.getElementById("tabNamePemainInput").value = savedTabPemain || "Pemain";
+
+            // Jalankan Penarikan Data Utama
+            loadAllData();
+        };
+
+        // Fungsi Pencari Nilai Kolom yang Sangat Kuat, Kebal Error Case-Sensitive & Secara Otomatis Mengabaikan No HP/Telepon
+        function getRobustValue(item, possibleKeys, defaultVal = '') {
+            if (!item) return defaultVal;
+            const itemKeys = Object.keys(item);
+            
+            // 1. Cari kecocokan exact case-insensitive & trimmed
+            for (let searchKey of possibleKeys) {
+                const foundKey = itemKeys.find(k => k.toLowerCase().trim() === searchKey.toLowerCase().trim());
+                if (foundKey && item[foundKey] !== undefined && item[foundKey] !== null && item[foundKey] !== '') {
+                    return item[foundKey];
+                }
+            }
+            
+            // 2. Cari kecocokan kata parsial, tapi kecualikan kolom No HP / No Telepon
+            for (let searchKey of possibleKeys) {
+                const foundKey = itemKeys.find(k => {
+                    const cleanKey = k.toLowerCase();
+                    // Jika mencari nama / klub / posisi, abaikan kolom yang merupakan No HP / telepon / WA
+                    const isHpColumn = cleanKey.includes('hp') || cleanKey.includes('telepon') || cleanKey.includes('telp') || cleanKey.includes('phone') || cleanKey.includes('wa');
+                    if (isHpColumn) {
+                        return false;
+                    }
+                    return cleanKey.includes(searchKey.toLowerCase());
+                });
+                if (foundKey && item[foundKey] !== undefined && item[foundKey] !== null && item[foundKey] !== '') {
+                    return item[foundKey];
+                }
+            }
+            
+            return defaultVal;
+        }
+
+        // Fungsi Pembuat ID Unik yang Konsisten untuk Mencegah Bug Shifting saat Memfilter List/Klub
+        function getUniqueId(item, idx, type) {
+            const realId = getRobustValue(item, ['no registrasi', 'no reg', 'registrasi', 'id', 'id pemain', 'id official', 'no kartu'], '');
+            if (realId) return `${type}-${realId}`;
+            
+            const name = getRobustValue(item, ['nama lengkap', 'nama pemain', 'nama official', 'nama', 'name', 'atlet'], '');
+            const club = getRobustValue(item, ['klub / ssb', 'klub/ssb', 'ssb', 'klub', 'club', 'nama klub', 'tim', 'team'], '');
+            if (name) {
+                return `${type}-${name.replace(/\s+/g, '')}-${club.replace(/\s+/g, '')}`;
+            }
+            return `${type}-fallback-${idx}`;
+        }
+
+        // Helper fungsi untuk memeriksa apakah suatu string merupakan link gambar/foto
+        function isImageUrl(val) {
+            if (typeof val !== 'string') return false;
+            val = val.trim();
+            if (!val.startsWith('http://') && !val.startsWith('https://')) return false;
+            
+            const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.bmp'];
+            const hasImgExt = imageExtensions.some(ext => val.toLowerCase().includes(ext));
+            const isDriveLink = val.includes('drive.google.com');
+            
+            return hasImgExt || isDriveLink;
+        }
+
+        // Helper fungsi untuk mengubah link viewer Google Drive menjadi link render gambar langsung
+        function getDirectImageUrl(url) {
+            if (typeof url !== 'string') return '';
+            url = url.trim();
+            
+            if (url.includes('drive.google.com')) {
+                let fileId = '';
+                const fileDMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+                const idParamMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                
+                if (fileDMatch && fileDMatch[1]) {
+                    fileId = fileDMatch[1];
+                } else if (idParamMatch && idParamMatch[1]) {
+                    fileId = idParamMatch[1];
+                }
+                
+                if (fileId) {
+                    return `https://lh3.googleusercontent.com/d/${fileId}`;
+                }
+            }
+            return url;
+        }
+
+        // Helper fungsi untuk mengambil link foto dari data baris pemain/official
+        function getPhotoFromItem(item) {
+            const photoKeys = ['foto', 'photo', 'gambar', 'image', 'link foto', 'link gambar', 'link photo'];
+            const foundVal = getRobustValue(item, photoKeys, '');
+            if (isImageUrl(foundVal)) {
+                return getDirectImageUrl(foundVal);
+            }
+            for (const key in item) {
+                if (isImageUrl(item[key])) {
+                    return getDirectImageUrl(item[key]);
+                }
+            }
+            return '';
+        }
+
+        // Notification helpers
+        function showToast(title = "Sukses!", desc = "Koneksi berhasil terhubung.") {
+            const toast = document.getElementById("toastNotification");
+            document.getElementById("toastTitle").textContent = title;
+            document.getElementById("toastDesc").textContent = desc;
+            toast.classList.remove("hidden");
+            setTimeout(() => {
+                hideToast();
+            }, 6000);
+        }
+
+        function hideToast() {
+            const toast = document.getElementById("toastNotification");
+            toast.classList.add("hidden");
+        }
+
+        // Modal Helpers
+        function toggleConfigModal() {
+            const modal = document.getElementById("configModal");
+            modal.classList.toggle("hidden");
+        }
+
+        function openPasteModal() {
+            document.getElementById("pasteModal").classList.remove("hidden");
+            setPasteTargetTab(activeTab); 
+        }
+        function closePasteModal() {
+            document.getElementById("pasteModal").classList.add("hidden");
+            document.getElementById("pasteTextArea").value = "";
+        }
+
+        function setPasteTargetTab(tabId) {
+            pasteTargetTab = tabId;
+            document.getElementById("pasteTargetTab").textContent = tabId.toUpperCase();
+            
+            document.querySelectorAll("#pasteTabSelector button").forEach(btn => {
+                btn.className = "px-3 py-1 text-[10px] font-bold rounded-md text-slate-600 hover:text-slate-800";
+            });
+            document.getElementById(`pasteTabBtn-${tabId}`).className = "px-3 py-1 text-[10px] font-bold rounded-md bg-white text-slate-800 shadow-sm";
+        }
+
+        // Proses Parsing Data Salinan dari Clipboard (Copy-Paste)
+        function processPastedData() {
+            const rawText = document.getElementById("pasteTextArea").value.trim();
+            if (!rawText) {
+                closePasteModal();
+                return;
+            }
+
+            const lines = rawText.split(/\r?\n/).map(line => line.split('\t'));
+            
+            if (lines.length === 0 || lines[0].length === 0) {
+                closePasteModal();
+                return;
+            }
+
+            const headers = lines[0].map(h => h.trim());
+            const parsedRows = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const cells = lines[i];
+                if (cells.length === 1 && cells[0].trim() === "") continue;
+
+                const item = {};
+                headers.forEach((h, idx) => {
+                    const colName = h || `Kolom_${idx + 1}`;
+                    item[colName] = cells[idx] ? cells[idx].trim() : "";
+                });
+                parsedRows.push(item);
+            }
+
+            allData[pasteTargetTab] = parsedRows;
+
+            document.getElementById("connectionAlert").classList.add("hidden");
+
+            document.getElementById("connectionStatusDot").className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
+            document.getElementById("connectionStatusText").textContent = "Data Manual Terpasang";
+            document.getElementById("connectionStatusText").className = "text-blue-600 font-bold";
+
+            document.getElementById("statKlub").textContent = allData.klub.length;
+            document.getElementById("statOfficial").textContent = allData.official.length;
+            document.getElementById("statPemain").textContent = allData.pemain.length;
+
+            extractClubList();
+            switchTab(pasteTargetTab);
+            closePasteModal();
+
+            showToast("Berhasil Diimpor!", `Data tab ${pasteTargetTab.toUpperCase()} telah berhasil diperbarui secara manual.`);
+        }
+
+        function saveAndReloadSheet() {
+            const val = document.getElementById("inputModalSheetId").value.trim();
+            const tabKlubVal = document.getElementById("tabNameKlubInput").value.trim();
+            const tabOfficialVal = document.getElementById("tabNameOfficialInput").value.trim();
+            const tabPemainVal = document.getElementById("tabNamePemainInput").value.trim();
+
+            if (val) {
+                spreadsheetId = val;
+                localStorage.setItem("sheet_print_app_id", val);
+            }
+
+            if (tabKlubVal) {
+                localStorage.setItem("sheet_tab_name_klub", tabKlubVal);
+                tabNamesMapping.klub.unshift(tabKlubVal);
+            }
+            if (tabOfficialVal) {
+                localStorage.setItem("sheet_tab_name_official", tabOfficialVal);
+                tabNamesMapping.official.unshift(tabOfficialVal);
+            }
+            if (tabPemainVal) {
+                localStorage.setItem("sheet_tab_name_pemain", tabPemainVal);
+                tabNamesMapping.pemain.unshift(tabPemainVal);
+            }
+
+            toggleConfigModal();
+            loadAllData();
+        }
+
+        function openPrintModal() {
+            document.getElementById("printModal").classList.remove("hidden");
+        }
+        function closePrintModal() {
+            document.getElementById("printModal").classList.add("hidden");
+        }
+
+        function openIdCardModal() {
+            document.getElementById("idCardModal").classList.remove("hidden");
+            
+            // Atur Dropdown Filter Klub
+            const idCardClubFilter = document.getElementById("cardClubFilter");
+            idCardClubFilter.innerHTML = '<option value="">Semua Klub</option>';
+            listClubs.forEach(clubName => {
+                if(clubName) {
+                    const opt = document.createElement("option");
+                    opt.value = clubName;
+                    opt.textContent = clubName;
+                    idCardClubFilter.appendChild(opt);
+                }
+            });
+
+            // Otomatis pilih semua dan bersihkan pemilihan sebelumnya untuk sinkronisasi state
+            selectedIdCardsMap = {};
+            toggleAllIndividualSelection(true);
+        }
+        function closeIdCardModal() {
+            document.getElementById("idCardModal").classList.add("hidden");
+        }
+
+        function parseCSVText(text) {
+            let lines = [];
+            let row = [""];
+            let inQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                let c = text[i];
+                let next = text[i+1];
+                if (c === '"') {
+                    if (inQuotes && next === '"') {
+                        row[row.length - 1] += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (c === ',' && !inQuotes) {
+                    row.push("");
+                } else if ((c === '\r' || c === '\n') && !inQuotes) {
+                    if (c === '\r' && next === '\n') {
+                        i++;
+                    }
+                    lines.push(row);
+                    row = [""];
+                } else {
+                    row[row.length - 1] += c;
+                }
+            }
+            if (row.length > 1 || row[0] !== "") {
+                lines.push(row);
+            }
+            
+            if (lines.length === 0) return { headers: [], data: [] };
+            
+            lines = lines.filter(r => r.some(cell => cell.trim() !== ""));
+            
+            const headers = lines[0].map(h => h.trim());
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const item = {};
+                lines[i].forEach((cell, idx) => {
+                    const colName = headers[idx] || `Komom_${idx + 1}`;
+                    item[colName] = cell.trim();
+                });
+                data.push(item);
+            }
+            
+            return { headers, data };
+        }
+
+        async function fetchSingleSheetCSV(sheetId, searchNames) {
+            for (const name of searchNames) {
+                try {
+                    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&sheet=${encodeURIComponent(name)}`;
+                    const response = await fetch(url);
+                    if (!response.ok) continue;
+                    
+                    const text = await response.text();
+                    if (text && text.trim().length > 0) {
+                        return parseCSVText(text);
+                    }
+                } catch (e) {
+                    console.warn(`Gagal mengunduh CSV untuk tab '${name}':`, e);
+                }
+            }
+            return null;
+        }
+
+        async function loadAllData() {
+            const syncIcon = document.getElementById("syncIcon");
+            if (syncIcon) syncIcon.classList.add("animate-spin");
+            
+            document.getElementById("loader").classList.remove("hidden");
+            document.getElementById("tableContainer").classList.add("hidden");
+            document.getElementById("emptyState").classList.add("hidden");
+            document.getElementById("errorState").classList.add("hidden");
+
+            document.getElementById("sheetIdDisplay").textContent = spreadsheetId;
+            document.getElementById("headerSheetIdDisplay").textContent = spreadsheetId.substring(0, 8) + "..." + spreadsheetId.substring(spreadsheetId.length - 6);
+
+            try {
+                const [klubResult, officialResult, pemainResult] = await Promise.all([
+                    fetchSingleSheetCSV(spreadsheetId, tabNamesMapping.klub),
+                    fetchSingleSheetCSV(spreadsheetId, tabNamesMapping.official),
+                    fetchSingleSheetCSV(spreadsheetId, tabNamesMapping.pemain)
+                ]);
+
+                const successKlub = klubResult && klubResult.data.length > 0;
+                const successOfficial = officialResult && officialResult.data.length > 0;
+                const successPemain = pemainResult && pemainResult.data.length > 0;
+
+                document.getElementById("tabLabelKlub").innerHTML = `Klub ${successKlub ? '<span class="text-[9px] bg-emerald-500 text-slate-900 px-1 py-0.5 rounded ml-1 font-bold">OK</span>' : '<span class="text-[9px] bg-red-500 text-white px-1 py-0.5 rounded ml-1 font-bold">X</span>'}`;
+                document.getElementById("tabLabelOfficial").innerHTML = `Official ${successOfficial ? '<span class="text-[9px] bg-emerald-500 text-slate-900 px-1 py-0.5 rounded ml-1 font-bold">OK</span>' : '<span class="text-[9px] bg-red-500 text-white px-1 py-0.5 rounded ml-1 font-bold">X</span>'}`;
+                document.getElementById("tabLabelPemain").innerHTML = `Pemain ${successPemain ? '<span class="text-[9px] bg-emerald-500 text-slate-900 px-1 py-0.5 rounded ml-1 font-bold">OK</span>' : '<span class="text-[9px] bg-red-500 text-white px-1 py-0.5 rounded ml-1 font-bold">X</span>'}`;
+
+                if (successKlub || successOfficial || successPemain) {
+                    allData.klub = successKlub ? klubResult.data : [];
+                    allData.official = successOfficial ? officialResult.data : [];
+                    allData.pemain = successPemain ? pemainResult.data : [];
+
+                    document.getElementById("connectionAlert").classList.add("hidden");
+
+                    const statusDot = document.getElementById("connectionStatusDot");
+                    if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                    
+                    const statusTxt = document.getElementById("connectionStatusText");
+                    if (statusTxt) {
+                        statusTxt.textContent = "Terhubung Real-Time";
+                        statusTxt.className = "text-emerald-600 font-bold";
+                    }
+
+                    showToast("Sinkronisasi Berhasil!", "Data dari Google Sheets Anda telah termuat sempurna.");
+                } else {
+                    throw new Error("Gagal mengambil data otomatis.");
+                }
+
+                document.getElementById("statKlub").textContent = allData.klub.length;
+                document.getElementById("statOfficial").textContent = allData.official.length;
+                document.getElementById("statPemain").textContent = allData.pemain.length;
+
+                extractClubList();
+                switchTab(activeTab);
+
+            } catch (err) {
+                console.error("Gagal menarik data secara otomatis. Menawarkan mode Manual Paste.", err);
+                
+                const statusDot = document.getElementById("connectionStatusDot");
+                if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-red-500 animate-pulse";
+                
+                const statusTxt = document.getElementById("connectionStatusText");
+                if (statusTxt) {
+                    statusTxt.textContent = "Koneksi Terhambat";
+                    statusTxt.className = "text-red-600 font-bold";
+                }
+
+                if (allData.klub.length === 0 && allData.official.length === 0 && allData.pemain.length === 0) {
+                    loadMockBackupData();
+                }
+
+                const errState = document.getElementById("errorState");
+                if (errState) errState.classList.remove("hidden");
+                
+                const loader = document.getElementById("loader");
+                if (loader) loader.classList.add("hidden");
+
+                document.getElementById("statKlub").textContent = allData.klub.length;
+                document.getElementById("statOfficial").textContent = allData.official.length;
+                document.getElementById("statPemain").textContent = allData.pemain.length;
+                
+                extractClubList();
+                switchTab(activeTab);
+            } finally {
+                if (syncIcon) syncIcon.classList.remove("animate-spin");
+            }
+        }
+
+        function loadMockBackupData() {
+            allData.klub = [
+                { "Nama Klub": "Persita Raya FC", "Asal Daerah": "Bandung", "Stadion": "Gelora Merdeka", "Tahun Berdiri": "1995" },
+                { "Nama Klub": "Barito Putera Utama", "Asal Daerah": "Banjarmasin", "Stadion": "17 Mei Arena", "Tahun Berdiri": "2001" },
+                { "Nama Klub": "Arema Sakti Dewata", "Asal Daerah": "Denpasar", "Stadion": "Mandalika Arena", "Tahun Berdiri": "2010" }
+            ];
+            allData.official = [
+                { "Nama Official": "Budi Santoso", "Klub/SSB": "Persita Raya FC", "Jabatan": "Pelatih Kepala", "Lisensi": "A AFC", "No Telepon": "0812345678", "Foto": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80" },
+                { "Nama Official": "Slamet Wijaya", "Klub/SSB": "Barito Putera Utama", "Jabatan": "Asisten Pelatih", "Lisensi": "B AFC", "No Telepon": "0823456789", "Foto": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&h=150&q=80" },
+                { "Nama Official": "Dr. Kevin Sanjaya", "Klub/SSB": "Arema Sakti Dewata", "Jabatan": "Dokter Tim", "Lisensi": "Sp.KO", "No Telepon": "0834567890", "Foto": "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=150&h=150&q=80" }
+            ];
+            allData.pemain = [
+                { "Nama Pemain": "Eka Ramdani", "Klub/SSB": "Persita Raya FC", "Nomor Punggung": "10", "Posisi": "Gelandang Serang", "Usia": "24", "No Registrasi": "P-9081", "Foto": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&h=150&q=80" },
+                { "Nama Pemain": "Boaz Salossa", "Klub/SSB": "Persita Raya FC", "Nomor Punggung": "7", "Posisi": "Striker", "Usia": "28", "No Registrasi": "P-9082", "Foto": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80" },
+                { "Nama Pemain": "Christian Gonzales", "Klub/SSB": "Arema Sakti Dewata", "Nomor Punggung": "9", "Posisi": "Striker", "Usia": "32", "No Registrasi": "P-9083", "Foto": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&h=150&q=80" },
+                { "Nama Pemain": "Andritany", "Klub/SSB": "Barito Putera Utama", "Nomor Punggung": "26", "Posisi": "Penjaga Gawang", "Usia": "26", "No Registrasi": "P-9084", "Foto": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&h=150&q=80" }
+            ];
+        }
+
+        function extractClubList() {
+            const clubsSet = new Set();
+            
+            allData.klub.forEach(item => {
+                const name = getRobustValue(item, ['nama klub', 'nama ssb', 'nama club', 'klub', 'ssb', 'nama']);
+                if (name) clubsSet.add(name);
+            });
+            allData.pemain.forEach(item => {
+                const name = getRobustValue(item, ['klub / ssb', 'klub/ssb', 'ssb', 'klub', 'club', 'nama klub', 'tim', 'team']);
+                if (name) clubsSet.add(name);
+            });
+            allData.official.forEach(item => {
+                const name = getRobustValue(item, ['klub / ssb', 'klub/ssb', 'ssb', 'klub', 'club', 'nama klub', 'tim', 'team']);
+                if (name) clubsSet.add(name);
+            });
+
+            listClubs = Array.from(clubsSet).sort();
+
+            const filterEl = document.getElementById("clubFilter");
+            filterEl.innerHTML = '<option value="">Semua Klub / SSB</option>';
+            listClubs.forEach(club => {
+                const opt = document.createElement("option");
+                opt.value = club;
+                opt.textContent = club;
+                filterEl.appendChild(opt);
+            });
+        }
+
+        function switchTab(tabId) {
+            activeTab = tabId;
+            
+            document.querySelectorAll(".tab-btn").forEach(btn => {
+                btn.className = "tab-btn px-4 py-2 text-xs font-semibold rounded-lg transition-all text-slate-400 hover:text-white hover:bg-slate-800/50";
+            });
+            document.getElementById(`tab-${tabId}`).className = "tab-btn px-4 py-2 text-xs font-semibold rounded-lg transition-all text-white bg-emerald-600 shadow-md";
+
+            const filterKlubContainer = document.getElementById("klubFilterContainer");
+            if (tabId === "klub") {
+                filterKlubContainer.style.display = "none";
+            } else {
+                filterKlubContainer.style.display = "block";
+            }
+
+            document.getElementById("searchInput").value = "";
+            document.getElementById("clubFilter").value = "";
+
+            filterData();
+        }
+
+        function filterData() {
+            const query = document.getElementById("searchInput").value.toLowerCase().trim();
+            const clubFilterVal = document.getElementById("clubFilter").value;
+            const dataToSearch = allData[activeTab];
+
+            filteredData = dataToSearch.filter(row => {
+                const matchesSearch = Object.values(row).some(val => 
+                    String(val).toLowerCase().includes(query)
+                );
+
+                let matchesClub = true;
+                if (activeTab !== "klub" && clubFilterVal) {
+                    const rowClub = getRobustValue(row, ['klub / ssb', 'klub/ssb', 'ssb', 'klub', 'club', 'nama klub', 'tim', 'team']);
+                    matchesClub = String(rowClub) === clubFilterVal;
+                }
+
+                return matchesSearch && matchesClub;
+            });
+
+            document.getElementById("totalCount").textContent = dataToSearch.length;
+            document.getElementById("displayedCount").textContent = filteredData.length;
+
+            renderTable();
+        }
+
+        function renderTable() {
+            const headerEl = document.getElementById("tableHeader");
+            const bodyEl = document.getElementById("tableBody");
+            const loader = document.getElementById("loader");
+            const container = document.getElementById("tableContainer");
+            const emptyState = document.getElementById("emptyState");
+
+            loader.classList.add("hidden");
+
+            if (filteredData.length === 0) {
+                container.classList.add("hidden");
+                emptyState.classList.remove("hidden");
+                return;
+            }
+
+            emptyState.classList.add("hidden");
+            container.classList.remove("hidden");
+
+            headerEl.innerHTML = "";
+            bodyEl.innerHTML = "";
+
+            const sampleRow = filteredData[0];
+            const columns = Object.keys(sampleRow);
+
+            const trHeader = document.createElement("tr");
+            
+            const thNo = document.createElement("th");
+            thNo.className = "px-6 py-4 font-semibold text-xs tracking-wider text-slate-500 w-12";
+            thNo.textContent = "No.";
+            trHeader.appendChild(thNo);
+
+            columns.forEach(col => {
+                const th = document.createElement("th");
+                th.className = "px-6 py-4 font-semibold text-xs tracking-wider text-slate-500";
+                th.textContent = col;
+                trHeader.appendChild(th);
+            });
+            headerEl.appendChild(trHeader);
+
+            filteredData.forEach((row, index) => {
+                const tr = document.createElement("tr");
+                tr.className = index % 2 === 0 ? "bg-white hover:bg-slate-50/50" : "bg-slate-50 hover:bg-slate-100/50";
+
+                const tdNo = document.createElement("td");
+                tdNo.className = "px-6 py-3 font-semibold text-slate-400";
+                tdNo.textContent = index + 1;
+                tr.appendChild(tdNo);
+
+                columns.forEach(col => {
+                    const td = document.createElement("td");
+                    td.className = "px-6 py-3 font-medium whitespace-nowrap align-middle";
+                    
+                    if (col.toLowerCase().includes("nama") || col.toLowerCase() === "klub" || col.toLowerCase() === "ssb") {
+                        td.className += " text-slate-900 font-semibold";
+                    }
+                    
+                    const cellValue = row[col];
+                    
+                    if (isImageUrl(cellValue)) {
+                        const directUrl = getDirectImageUrl(cellValue);
+                        td.innerHTML = `
+                            <div class="w-12 h-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm flex items-center justify-center">
+                                <img src="${directUrl}" alt="Foto" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentNode.innerHTML='<span class=\\'text-[9px] text-slate-400 font-bold\\'>Gagal</span>';">
+                            </div>
+                        `;
+                    } else {
+                        td.textContent = cellValue !== undefined && cellValue !== null ? cellValue : "-";
+                    }
+                    
+                    tr.appendChild(td);
+                });
+                bodyEl.appendChild(tr);
+            });
+
+            lucide.createIcons();
+        }
+
+        // ==========================================
+        // PROSES CETAK DOKUMEN LAPORAN & FORMULIR
+        // ==========================================
+        function triggerPrintDocument() {
+            const template = document.querySelector('input[name="printTemplate"]:checked').value;
+            const instansi = document.getElementById("printInstansi").value;
+            const turnamen = document.getElementById("printTurnamen").value;
+            
+            const printDock = document.getElementById("printingAreaContainer");
+            printDock.innerHTML = ""; 
+
+            if (template === "tabel") {
+                let tableHtml = `
+                    <div style="font-family: 'Plus Jakarta Sans', sans-serif; padding: 20px; color: black; background: white;">
+                        <div style="text-align: center; border-bottom: 3px double #000; padding-bottom: 12px; margin-bottom: 20px;">
+                            <h2 style="font-size: 16px; font-weight: 800; text-transform: uppercase; margin: 0; letter-spacing: 1px;">${instansi}</h2>
+                            <h3 style="font-size: 14px; font-weight: 700; margin: 4px 0 0 0; color: #334155;">${turnamen}</h3>
+                            <p style="font-size: 10px; font-weight: 500; margin: 4px 0 0 0; color: #64748b;">Dokumen Resmi Laporan Data Terverifikasi • Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <h4 style="font-size: 13px; font-weight: bold; margin: 0; text-transform: uppercase;">
+                                LAPORAN DATA ${activeTab.toUpperCase()} SEMENTARA
+                            </h4>
+                            <p style="font-size: 10px; color: #475569; margin: 2px 0 0 0;">Daftar lengkap baris data yang lolos seleksi administratif turnamen.</p>
+                        </div>
+
+                        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                            <thead>
+                                <tr style="background-color: #f1f5f9; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000;">
+                                    <th style="padding: 8px 6px; text-align: left; font-weight: bold; width: 35px; border: 1px solid #cbd5e1;">NO.</th>
+                `;
+
+                if (filteredData.length > 0) {
+                    const columns = Object.keys(filteredData[0]);
+                    columns.forEach(col => {
+                        tableHtml += `<th style="padding: 8px 6px; text-align: left; font-weight: bold; border: 1px solid #cbd5e1; text-transform: uppercase;">${col}</th>`;
+                    });
+                    tableHtml += `</tr></thead><tbody>`;
+
+                    filteredData.forEach((row, idx) => {
+                        tableHtml += `<tr style="border-bottom: 1px solid #e2e8f0; ${idx % 2 === 0 ? '' : 'background-color: #f8fafc;'}">`;
+                        tableHtml += `<td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-weight: bold;">${idx + 1}</td>`;
+                        columns.forEach(col => {
+                            const val = row[col];
+                            if (isImageUrl(val)) {
+                                const directUrl = getDirectImageUrl(val);
+                                tableHtml += `
+                                    <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center;">
+                                        <img src="${directUrl}" alt="Foto" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; display: inline-block;">
+                                    </td>
+                                `;
+                            } else {
+                                tableHtml += `<td style="padding: 8px 6px; border: 1px solid #cbd5e1;">${val || "-"}</td>`;
+                            }
+                        });
+                        tableHtml += `</tr>`;
+                    });
+                }
+
+                tableHtml += `
+                            </tbody>
+                        </table>
+
+                        <div style="margin-top: 40px; display: flex; justify-content: space-between; font-size: 11px;">
+                            <div>
+                                <p style="margin-bottom: 60px;">Disiapkan Oleh,<br><b>Sekretariat Panitia</b></p>
+                                <p>_______________________</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <p style="margin-bottom: 60px;">Mengesahkan,<br><b>Ketua Penyelenggara</b></p>
+                                <p>_______________________</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                printDock.innerHTML = tableHtml;
+
+            } else if (template === "kartu_tim") {
+                let multiHtml = "";
+                
+                listClubs.forEach((clubName, cIdx) => {
+                    const clubPlayers = allData.pemain.filter(p => {
+                        const clb = getRobustValue(p, ['klub / ssb', 'klub/ssb', 'ssb', 'klub', 'club', 'nama klub', 'tim', 'team']);
+                        return String(clb) === clubName;
+                    });
+                    const clubOfficials = allData.official.filter(o => {
+                        const clb = getRobustValue(o, ['klub / ssb', 'klub/ssb', 'ssb', 'klub', 'club', 'nama klub', 'tim', 'team']);
+                        return String(clb) === clubName;
+                    });
+
+                    if (clubPlayers.length === 0 && clubOfficials.length === 0) return; 
+
+                    multiHtml += `
+                        <div class="page-break" style="font-family: 'Plus Jakarta Sans', sans-serif; padding: 20px; color: black; background: white;">
+                            <div style="text-align: center; border-bottom: 3px double #000; padding-bottom: 12px; margin-bottom: 15px;">
+                                <h2 style="font-size: 15px; font-weight: 800; text-transform: uppercase; margin: 0;">${instansi}</h2>
+                                <h3 style="font-size: 13px; font-weight: 700; margin: 4px 0 0 0;">FORMULIR ROSTER RESMI ANGGOTA TIM</h3>
+                                <p style="font-size: 9px; margin: 2px 0 0 0; color: #475569;">${turnamen}</p>
+                            </div>
+
+                            <div style="background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold;">NAMA KLUB / SSB</span>
+                                    <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0;">${clubName}</h3>
+                                </div>
+                                <div style="text-align: right; font-size: 11px;">
+                                    <p style="margin: 0;">Jumlah Pemain: <b>${clubPlayers.length} Orang</b></p>
+                                    <p style="margin: 2px 0 0 0;">Jumlah Official: <b>${clubOfficials.length} Orang</b></p>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="font-size: 11px; font-weight: bold; border-bottom: 1.5px solid #0284c7; padding-bottom: 4px; color: #0284c7; margin-bottom: 8px; text-transform: uppercase;">I. SUSUNAN OFFICIAL / MANAGER TIM</h4>
+                                <table style="width: 100%; border-collapse: collapse; font-size: 9.5px;">
+                                    <thead>
+                                        <tr style="background-color: #f8fafc; border-bottom: 1px solid #cbd5e1;">
+                                            <th style="padding: 5px; text-align: left; width: 30px;">NO</th>
+                                            <th style="padding: 5px; text-align: left; width: 45px;">FOTO</th>
+                                            <th style="padding: 5px; text-align: left;">NAMA LENGKAP</th>
+                                            <th style="padding: 5px; text-align: left;">JABATAN</th>
+                                            <th style="padding: 5px; text-align: left;">KETERANGAN / LISENSI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+
+                    if (clubOfficials.length > 0) {
+                        clubOfficials.forEach((off, oIdx) => {
+                            const photoUrl = getPhotoFromItem(off);
+                            const photoCell = photoUrl ? 
+                                `<img src="${photoUrl}" style="width: 28px; height: 35px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1;">` :
+                                `<span style="font-size: 8px; color: #94a3b8;">Tidak ada</span>`;
+                            const offName = getRobustValue(off, ['nama lengkap', 'nama official', 'nama', 'official', 'name', 'atlet'], '-');
+                            const offJabatan = getRobustValue(off, ['jabatan', 'peran', 'posisi', 'role'], '-');
+                                
+                            multiHtml += `
+                                <tr style="border-bottom: 1px dashed #e2e8f0;">
+                                    <td style="padding: 5px; font-weight: bold; vertical-align: middle;">${oIdx + 1}</td>
+                                    <td style="padding: 3px; vertical-align: middle;">${photoCell}</td>
+                                    <td style="padding: 5px; font-weight: bold; vertical-align: middle;">${offName}</td>
+                                    <td style="padding: 5px; vertical-align: middle;">${offJabatan}</td>
+                                    <td style="padding: 5px; vertical-align: middle;">${getRobustValue(off, ['lisensi', 'keterangan'], '-')}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        multiHtml += `<tr><td colspan="5" style="padding: 8px; text-align: center; color: #94a3b8;">Belum ada data official untuk klub ini</td></tr>`;
+                    }
+
+                    multiHtml += `
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div>
+                                <h4 style="font-size: 11px; font-weight: bold; border-bottom: 1.5px solid #10b981; padding-bottom: 4px; color: #10b981; margin-bottom: 8px; text-transform: uppercase;">II. SUSUNAN ROSTER ATLET / PEMAIN</h4>
+                                <table style="width: 100%; border-collapse: collapse; font-size: 9.5px;">
+                                    <thead>
+                                        <tr style="background-color: #f8fafc; border-bottom: 1px solid #cbd5e1;">
+                                            <th style="padding: 5px; text-align: left; width: 30px;">NO</th>
+                                            <th style="padding: 5px; text-align: left; width: 45px;">FOTO</th>
+                                            <th style="padding: 5px; text-align: left; width: 60px;">NO PUNGGUNG</th>
+                                            <th style="padding: 5px; text-align: left;">NAMA LENGKAP</th>
+                                            <th style="padding: 5px; text-align: left;">POSISI MAIN</th>
+                                            <th style="padding: 5px; text-align: center; width: 60px;">USIA</th>
+                                            <th style="padding: 5px; text-align: right; width: 100px;">NO REGISTRASI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+
+                    if (clubPlayers.length > 0) {
+                        clubPlayers.forEach((player, pIdx) => {
+                            const photoUrl = getPhotoFromItem(player);
+                            const photoCell = photoUrl ? 
+                                `<img src="${photoUrl}" style="width: 28px; height: 35px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1;">` :
+                                `<span style="font-size: 8px; color: #94a3b8;">Tidak ada</span>`;
+
+                            const pName = getRobustValue(player, ['nama lengkap', 'nama pemain', 'nama', 'peserta', 'atlet', 'name'], '-');
+                            const pPos = getRobustValue(player, ['posisi', 'posisi main', 'jabatan', 'role'], '-');
+                            const pNum = getRobustValue(player, ['nomor punggung', 'no punggung', 'no. punggung', 'nopung', 'punggung', 'no'], '-');
+                            const pAge = getRobustValue(player, ['usia', 'umur', 'age'], '-');
+                            const pReg = getRobustValue(player, ['no registrasi', 'no reg', 'registrasi', 'id', 'id pemain'], '-');
+
+                            multiHtml += `
+                                <tr style="border-bottom: 1px dashed #e2e8f0;">
+                                    <td style="padding: 5px; font-weight: bold; vertical-align: middle;">${pIdx + 1}</td>
+                                    <td style="padding: 3px; vertical-align: middle;">${photoCell}</td>
+                                    <td style="padding: 5px; font-weight: bold; text-align: center; background-color: #f1f5f9; border-radius: 4px; vertical-align: middle;">${pNum}</td>
+                                    <td style="padding: 5px; font-weight: bold; text-transform: uppercase; vertical-align: middle;">${pName}</td>
+                                    <td style="padding: 5px; vertical-align: middle;">${pPos}</td>
+                                    <td style="padding: 5px; text-align: center; vertical-align: middle;">${pAge} th</td>
+                                    <td style="padding: 5px; text-align: right; font-family: monospace; vertical-align: middle;">${pReg}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        multiHtml += `<tr><td colspan="7" style="padding: 8px; text-align: center; color: #94a3b8;">Belum ada daftar pemain untuk klub ini</td></tr>`;
+                    }
+
+                    multiHtml += `
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div style="margin-top: 35px; display: flex; justify-content: space-between; font-size: 10px;">
+                                <div style="text-align: center;">
+                                    <p style="margin: 0 0 45px 0;">Manager Tim,<br><span style="text-transform: uppercase; font-weight: bold;">${clubName}</span></p>
+                                    <p>_______________________</p>
+                                </div>
+                                <div style="text-align: center;">
+                                    <p style="margin: 0 0 45px 0;">Petugas Administrasi,<br><b>Tim Verifikasi</b></p>
+                                    <p>_______________________</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                printDock.innerHTML = multiHtml;
+            }
+
+            // Jalankan jendela cetak browser
+            setTimeout(() => {
+                window.print();
+                closePrintModal();
+            }, 100);
+        }
+
+        // ========================================================
+        // STUDIO ID CARD: CHECKLIST INDIVIDU & TEMPLATE CREATOR
+        // ========================================================
+        
+        function getSelectedCardsList() {
+            const sourceType = document.getElementById("cardSourceType").value;
+            const clubFilter = document.getElementById("cardClubFilter").value;
+            let list = allData[sourceType] || [];
+            
+            // Filter klub jika terpilih
+            if (clubFilter) {
+                list = list.filter(item => {
+                    const clb = getRobustValue(item, ['klub / ssb', 'klub/ssb', 'ssb', 'klub', 'club', 'nama klub', 'tim', 'team']);
+                    return String(clb) === clubFilter;
+                });
+            }
+            return list;
+        }
+
+        function onSourceTypeChange() {
+            // Saat ganti tipe data (pemain -> official), reset checklist
+            toggleAllIndividualSelection(true);
+        }
+
+        function onClubFilterChange() {
+            toggleAllIndividualSelection(true);
+        }
+
+        function toggleAllIndividualSelection(status) {
+            const list = getSelectedCardsList();
+            const sourceType = document.getElementById("cardSourceType").value;
+            list.forEach((item, idx) => {
+                const uniqueId = getUniqueId(item, idx, sourceType);
+                selectedIdCardsMap[uniqueId] = status;
+            });
+            updateChecklistCounter();
+            generateChecklistUI();
+            generateIdCardPreviews();
+        }
+
+        function updateChecklistCounter() {
+            const list = getSelectedCardsList();
+            const sourceType = document.getElementById("cardSourceType").value;
+            let count = 0;
+            list.forEach((item, idx) => {
+                const uniqueId = getUniqueId(item, idx, sourceType);
+                if (selectedIdCardsMap[uniqueId] === true) count++;
+            });
+            document.getElementById("selectedChecklistCount").textContent = count;
+        }
+
+        function generateChecklistUI() {
+            const list = getSelectedCardsList();
+            const container = document.getElementById("individualChecklistContainer");
+            container.innerHTML = "";
+
+            if (list.length === 0) {
+                container.innerHTML = `<p class="text-[10px] text-slate-400 text-center py-4">Tidak ada anggota.</p>`;
+                return;
+            }
+
+            const sourceType = document.getElementById("cardSourceType").value;
+
+            list.forEach((item, idx) => {
+                const fullName = getRobustValue(item, ['nama lengkap', 'nama pemain', 'nama official', 'nama', 'name', 'atlet'], 'NAMA ANGGOTA');
+                const roleOrPos = getRobustValue(item, ['posisi', 'jabatan', 'peran', 'posisi main', 'role'], 'ANGGOTA');
+                const uniqueId = getUniqueId(item, idx, sourceType);
+                const backNum = getRobustValue(item, ['nomor punggung', 'no punggung', 'no. punggung', 'nopung', 'no'], '');
+                
+                const isChecked = selectedIdCardsMap[uniqueId] !== false; // Default true jika belum diset
+
+                const itemDiv = document.createElement("div");
+                itemDiv.className = `flex items-center justify-between p-2 rounded-lg border transition-all text-[11px] ${isChecked ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`;
+                
+                const label = document.createElement("label");
+                label.className = "flex items-center space-x-2.5 cursor-pointer flex-1 min-w-0";
+                
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.checked = isChecked;
+                checkbox.className = "rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5";
+                
+                // Mencegah error syntax akibat karakter petik (' atau ") pada Nama Atlet/Official
+                checkbox.addEventListener("change", (e) => {
+                    toggleCardItem(uniqueId, e.target.checked);
+                });
+                
+                const infoDiv = document.createElement("div");
+                infoDiv.className = "truncate";
+                infoDiv.innerHTML = `
+                    <h5 class="font-bold text-slate-800 truncate">${fullName} ${backNum ? `(#${backNum})` : ''}</h5>
+                    <p class="text-[9px] text-slate-400 font-semibold truncate uppercase">${roleOrPos}</p>
+                `;
+                
+                label.appendChild(checkbox);
+                label.appendChild(infoDiv);
+                itemDiv.appendChild(label);
+                container.appendChild(itemDiv);
+            });
+        }
+
+        function toggleCardItem(uniqueId, checked) {
+            selectedIdCardsMap[uniqueId] = checked;
+            updateChecklistCounter();
+            generateChecklistUI();
+            generateIdCardPreviews();
+        }
+
+        function generateIdCardPreviews() {
+            const sourceType = document.getElementById("cardSourceType").value;
+            const themeColor = document.getElementById("cardThemeColor").value;
+            const textColor = document.getElementById("cardThemeText").value;
+            const orgName = document.getElementById("cardOrgName").value;
+            const designTemplate = document.getElementById("cardDesignTemplate").value;
+            const photoShape = document.getElementById("cardPhotoShape").value;
+            const showQr = document.getElementById("cardShowQrCode").checked;
+
+            const gridContainer = document.getElementById("idCardPreviewGrid");
+            gridContainer.innerHTML = "";
+
+            const targetData = getSelectedCardsList();
+            let previewCount = 0;
+
+            targetData.forEach((item, idx) => {
+                const idNum = getUniqueId(item, idx, sourceType);
+                
+                // Lewati jika user tidak men-checklist individu ini
+                if (selectedIdCardsMap[idNum] === false) return;
+                previewCount++;
+
+                const fullName = getRobustValue(item, ['nama lengkap', 'nama pemain', 'nama official', 'nama', 'name', 'atlet'], 'NAMA ANGGOTA');
+                const clubName = getRobustValue(item, ['klub / ssb', 'klub/ssb', 'ssb', 'klub', 'club', 'nama klub', 'nama ssb', 'nama club', 'tim', 'team'], 'KLUB / SSB');
+                const roleOrPos = getRobustValue(item, ['posisi', 'jabatan', 'peran', 'posisi main', 'role'], (sourceType === 'pemain' ? 'ATLET' : 'OFFICIAL'));
+                const backNum = getRobustValue(item, ['nomor punggung', 'no punggung', 'no. punggung', 'nopung', 'punggung', 'no'], '');
+                const displayRegId = getRobustValue(item, ['no registrasi', 'no reg', 'registrasi', 'id', 'id pemain', 'id official', 'no kartu'], `GEN-${idx}`);
+                
+                const photoUrl = getPhotoFromItem(item);
+                const photoHtml = photoUrl ? 
+                    `<img src="${photoUrl}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentNode.innerHTML='<i data-lucide=\\'user\\' class=\\'w-10 h-10 text-slate-500\\'></i><span class=\\'text-[6px] text-slate-500 font-bold uppercase mt-1\\'>Gagal</span>';">` :
+                    `<i data-lucide="user" class="w-10 h-10 text-slate-500"></i><span class="text-[6px] text-slate-500 font-bold uppercase mt-1">FOTO 3X4</span>`;
+
+                // Layout Foto Shape (Circle vs Square)
+                const imgShapeClass = photoShape === 'circle' ? 'rounded-full' : 'rounded-lg';
+
+                // QR Code API
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(displayRegId)}`;
+
+                // Definisikan Template CSS Styles menggunakan background JERSEY.jpg dengan filter overlay gelap premium
+                let cardBodyStyle = `background: linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.85)), url('JERSEY.jpg') no-repeat; background-size: cover; background-position: center;`;
+                let headerStyle = `background-color: ${themeColor}; color: ${textColor};`;
+                let decorOverlay = ``;
+
+                if (designTemplate === 'gradient-wave') {
+                    headerStyle = `background: linear-gradient(135deg, ${themeColor} 0%, #1e293b 100%); color: ${textColor};`;
+                    cardBodyStyle = `background: linear-gradient(rgba(30, 41, 59, 0.35), rgba(2, 6, 23, 0.92)), url('JERSEY.jpg') no-repeat; background-size: cover; background-position: center; border: 2px solid ${themeColor}88;`;
+                } else if (designTemplate === 'retro-stripe') {
+                    decorOverlay = `<div class="absolute left-0 right-0 top-1/2 h-1.5 opacity-40" style="background: repeating-linear-gradient(45deg, ${themeColor}, ${themeColor} 10px, transparent 10px, transparent 20px);"></div>`;
+                    headerStyle = `background-color: ${themeColor}; color: ${textColor}; border-bottom: 3px double ${textColor}88;`;
+                    cardBodyStyle = `background: linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.9)), url('JERSEY.jpg') no-repeat; background-size: cover; background-position: center; border: 2px solid ${themeColor}88;`;
+                } else if (designTemplate === 'dark-futuristic') {
+                    cardBodyStyle = `background: linear-gradient(rgba(5, 5, 8, 0.35), rgba(5, 5, 8, 0.95)), url('JERSEY.jpg') no-repeat; background-size: cover; background-position: center; border: 2px solid ${themeColor};`;
+                    headerStyle = `background: linear-gradient(180deg, #0f0f15 0%, #020205 100%); color: ${themeColor}; border-bottom: 2px solid ${themeColor}; text-shadow: 0 0 5px ${themeColor}aa;`;
+                } else { // Solid Modern
+                    headerStyle = `background: linear-gradient(180deg, ${themeColor} 0%, ${themeColor}dd 100%); color: ${textColor};`;
+                    cardBodyStyle = `background: linear-gradient(rgba(10, 17, 40, 0.4), rgba(10, 17, 40, 0.9)), url('JERSEY.jpg') no-repeat; background-size: cover; background-position: center; border: 2.5px solid ${themeColor};`;
+                }
+
+                const cardOuter = document.createElement("div");
+                cardOuter.className = "bg-white p-2 rounded-xl shadow border border-slate-200 flex justify-center";
+                
+                cardOuter.innerHTML = `
+                    <div class="relative w-[210px] h-[330px] rounded-lg overflow-hidden border border-slate-300 shadow-md text-white flex flex-col justify-between" style="${cardBodyStyle} box-shadow: 0 6px 12px -2px rgba(0,0,0,0.3)">
+                        
+                        <!-- Header Organisasi dengan Dual Logo (GEAS Kiri & Putra Asgar Kanan) -->
+                        <div class="p-1 px-2 flex items-center justify-between relative z-10 gap-1 border-b border-white/10" style="${headerStyle}">
+                            <img src="GEAS.png" class="h-6 w-6 object-contain shrink-0" onerror="this.style.opacity='0.5'">
+                            <div class="text-center flex-1 min-w-0">
+                                <h5 class="text-[7px] font-extrabold tracking-wider uppercase truncate leading-tight">${orgName}</h5>
+                                <h4 class="text-[8.5px] font-black tracking-normal uppercase mt-0.5" style="color: #fbbf24; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">${sourceType === 'pemain' ? 'PESERTA' : 'OFFICIAL'}</h4>
+                            </div>
+                            <img src="Putra Asgar A.png" class="h-6 w-6 object-contain shrink-0" onerror="this.style.opacity='0.5'">
+                        </div>
+
+                        <!-- Body Konten Utama -->
+                        <div class="flex-1 flex flex-col items-center justify-center p-3 relative z-10">
+                            ${decorOverlay}
+                            <div class="absolute opacity-[0.03] text-[90px] font-bold pointer-events-none select-none font-mono-tech" style="color: ${themeColor}">
+                                ${backNum ? backNum : 'ID'}
+                            </div>
+
+                            <!-- Frame Foto -->
+                            <div class="w-20 h-24 bg-slate-800/95 ${imgShapeClass} border-2 flex flex-col items-center justify-center overflow-hidden relative shadow-inner" style="border-color: ${themeColor}; box-shadow: 0 4px 10px rgba(0,0,0,0.5)">
+                                ${photoHtml}
+                                ${backNum ? `<div class="absolute top-1 right-1 bg-yellow-500 text-slate-900 text-[9px] font-extrabold px-1 rounded font-mono-tech z-10 shadow">${backNum}</div>` : ''}
+                            </div>
+
+                            <h3 class="text-xs font-extrabold uppercase mt-2 text-center text-white truncate max-w-full leading-tight px-1 z-10">${fullName}</h3>
+                            <span class="text-[8px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded mt-1 bg-slate-950/80 border border-white/10 z-10" style="color: ${themeColor}">${roleOrPos}</span>
+                        </div>
+
+                        <!-- Footer & Opsional QR Code -->
+                        <div class="p-2 border-t border-slate-800/80 text-center bg-slate-950/95 relative z-10">
+                            <div class="flex items-center justify-between gap-1">
+                                <div class="text-left flex-1 min-w-0">
+                                    <span class="text-[5.5px] block text-slate-500 uppercase tracking-widest font-semibold">KLUB / SSB</span>
+                                    <span class="text-[9.5px] block font-black text-slate-200 uppercase truncate leading-tight">${clubName}</span>
+                                    <span class="text-[6.5px] font-mono text-slate-400 mt-1 block">ID: ${displayRegId}</span>
+                                </div>
+                                ${showQr ? `
+                                <div class="w-10 h-10 bg-white p-0.5 rounded flex items-center justify-center border border-slate-200 shadow-md">
+                                    <img src="${qrCodeUrl}" alt="QR" class="w-full h-full">
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                gridContainer.appendChild(cardOuter);
+            });
+
+            document.getElementById("idCardCountPreview").textContent = previewCount;
+            lucide.createIcons();
+        }
+
+        function triggerPrintIdCards() {
+            const sourceType = document.getElementById("cardSourceType").value;
+            const themeColor = document.getElementById("cardThemeColor").value;
+            const textColor = document.getElementById("cardThemeText").value;
+            const orgName = document.getElementById("cardOrgName").value;
+            const designTemplate = document.getElementById("cardDesignTemplate").value;
+            const photoShape = document.getElementById("cardPhotoShape").value;
+            const showQr = document.getElementById("cardShowQrCode").checked;
+            const showCutLines = document.getElementById("cardShowCutLines").checked;
+            const doubleSided = document.getElementById("cardPrintDoubleSided").checked;
+
+            const printDock = document.getElementById("printingAreaContainer");
+            printDock.innerHTML = ""; 
+
+            const targetData = getSelectedCardsList();
+            
+            // Filter hanya yang diceklis
+            const selectedData = targetData.filter((item, idx) => {
+                const idNum = getUniqueId(item, idx, sourceType);
+                return selectedIdCardsMap[idNum] !== false;
+            });
+
+            if (selectedData.length === 0) {
+                alert("Harap pilih minimal satu orang anggota untuk dicetak!");
+                return;
+            }
+
+            // Indikasi UI Loading saat Menunggu Preloading Gambar Selesai
+            const btnPrint = document.getElementById("btnPrintSelection");
+            const originalBtnHtml = btnPrint ? btnPrint.innerHTML : "";
+            if (btnPrint) {
+                btnPrint.disabled = true;
+                btnPrint.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i><span>Memuat Gambar & QR...</span>`;
+                lucide.createIcons();
+            }
+
+            const cutLineBorder = showCutLines ? `border: 1px dashed #64748b;` : `border: 1.5px solid #000000;`;
+
+            // Menggunakan display flex wrap yang super fleksibel & anti berantakan di cetakan kertas portrait/landscape
+            let printHtml = `
+                <div style="padding: 10px; font-family: 'Plus Jakarta Sans', sans-serif; background: white;">
+                    <div class="no-print" style="text-align: center; background-color: #e2e8f0; padding: 10px; border-radius: 8px; font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 20px;">
+                        LAYOUT KERTAS CETAK ID CARD • Terpilih: ${selectedData.length} Kartu
+                    </div>
+                    <!-- Gambar dummy preloader JERSEY.jpg tersembunyi agar browser memproses download aset sebelum mencetak -->
+                    <img src="JERSEY.jpg" style="display: none;" alt="preload-jersey">
+                    <div style="display: flex; flex-wrap: wrap; gap: 20px 15px; justify-content: center; align-items: start;">
+            `;
+
+            selectedData.forEach((item, idx) => {
+                const fullName = getRobustValue(item, ['nama lengkap', 'nama pemain', 'nama official', 'nama', 'name', 'atlet'], 'NAMA ANGGOTA');
+                const clubName = getRobustValue(item, ['klub / ssb', 'klub/ssb', 'ssb', 'klub', 'club', 'nama klub', 'nama ssb', 'nama club', 'tim', 'team'], 'KLUB / SSB');
+                const roleOrPos = getRobustValue(item, ['posisi', 'jabatan', 'peran', 'posisi main', 'role'], (sourceType === 'pemain' ? 'ATLET' : 'OFFICIAL'));
+                const backNum = getRobustValue(item, ['nomor punggung', 'no punggung', 'no. punggung', 'nopung', 'punggung', 'no'], '');
+                const displayRegId = getRobustValue(item, ['no registrasi', 'no reg', 'registrasi', 'id', 'id pemain', 'id official', 'no kartu'], `GEN-${idx}`);
+
+                const photoUrl = getPhotoFromItem(item);
+                const photoHtml = photoUrl ? 
+                    `<img src="${photoUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.parentNode.innerHTML='<span style=\\'font-size: 7px; color: #64748b; font-weight: bold;\\'>FOTO</span>';">` :
+                    `<span style="font-size: 7px; color: #64748b; font-weight: bold;">FOTO 3X4</span>`;
+
+                const imgShapeClass = photoShape === 'circle' ? 'border-radius: 9999px;' : 'border-radius: 6px;';
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(displayRegId)}`;
+
+                // Desain Template Styles menggunakan JERSEY.jpg sebagai background image untuk lembar cetak
+                let cardBodyStyle = `background: linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.85)), url('JERSEY.jpg') no-repeat; background-size: cover; background-position: center;`;
+                let headerStyle = `background-color: ${themeColor}; color: ${textColor};`;
+                let decorOverlay = ``;
+
+                if (designTemplate === 'gradient-wave') {
+                    headerStyle = `background: linear-gradient(135deg, ${themeColor} 0%, #1e293b 100%); color: ${textColor};`;
+                    cardBodyStyle = `background: linear-gradient(rgba(30, 41, 59, 0.35), rgba(2, 6, 23, 0.92)), url('JERSEY.jpg') no-repeat; background-size: cover; background-position: center; border: 2px solid ${themeColor}88;`;
+                } else if (designTemplate === 'retro-stripe') {
+                    decorOverlay = `<div style="position: absolute; left: 0; right: 0; top: 50%; height: 6px; opacity: 0.4; background: repeating-linear-gradient(45deg, ${themeColor}, ${themeColor} 10px, transparent 10px, transparent 20px);"></div>`;
+                    headerStyle = `background-color: ${themeColor}; color: ${textColor}; border-bottom: 2px solid ${textColor}44;`;
+                    cardBodyStyle = `background: linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.9)), url('JERSEY.jpg') no-repeat; background-size: cover; background-position: center; border: 2px solid ${themeColor}88;`;
+                } else if (designTemplate === 'dark-futuristic') {
+                    cardBodyStyle = `background: linear-gradient(rgba(5, 5, 8, 0.35), rgba(5, 5, 8, 0.95)), url('JERSEY.jpg') no-repeat; background-size: cover; background-position: center; border: 2px solid ${themeColor};`;
+                    headerStyle = `background-color: #0a0a0f; color: ${themeColor}; border-bottom: 2.5px solid ${themeColor}; text-shadow: 0 0 5px ${themeColor}aa;`;
+                } else { // Solid Modern
+                    headerStyle = `background: linear-gradient(180deg, ${themeColor} 0%, ${themeColor}dd 100%); color: ${textColor};`;
+                    cardBodyStyle = `background: linear-gradient(rgba(10, 17, 40, 0.4), rgba(10, 17, 40, 0.9)), url('JERSEY.jpg') no-repeat; background-size: cover; background-position: center; border: 2.5px solid ${themeColor};`;
+                }
+
+                // DEPAN KARTU dengan penempatan logo GEAS (kiri) & Putra Asgar (kanan)
+                printHtml += `
+                    <div style="width: 215px; height: 330px; ${cutLineBorder} border-radius: 8px; overflow: hidden; ${cardBodyStyle} color: #ffffff; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid; position: relative;">
+                        
+                        <!-- Header dengan Dual Logo Atas Kiri & Kanan -->
+                        <div style="${headerStyle} padding: 6px 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid rgba(0,0,0,0.15); position: relative; z-index: 10;">
+                            <img src="GEAS.png" style="height: 24px; width: 24px; object-fit: contain;" onerror="this.style.opacity='0.5'">
+                            <div style="text-align: center; flex-grow: 1; padding: 0 4px; min-width: 0;">
+                                <h5 style="font-size: 7px; font-weight: bold; text-transform: uppercase; margin: 0; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${orgName}</h5>
+                                <h4 style="font-size: 9px; font-weight: 900; text-transform: uppercase; margin: 1px 0 0 0; color: #fbbf24;">${sourceType === 'pemain' ? 'PESERTA' : 'OFFICIAL'}</h4>
+                            </div>
+                            <img src="Putra Asgar A.png" style="height: 24px; width: 24px; object-fit: contain;" onerror="this.style.opacity='0.5'">
+                        </div>
+
+                        <div style="padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-grow: 1; position: relative;">
+                            ${decorOverlay}
+                            <div style="position: absolute; font-size: 80px; font-weight: 900; color: rgba(255, 255, 255, 0.04); pointer-events: none; z-index: 0; font-family: 'Share Tech Mono', monospace;">
+                                ${backNum ? backNum : 'ID'}
+                            </div>
+
+                            <div style="width: 76px; height: 96px; background-color: #1e293b; border: 2px solid ${themeColor}; ${imgShapeClass} display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; z-index: 1; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.4)">
+                                ${photoHtml}
+                                ${backNum ? `<div style="position: absolute; top: 2px; right: 2px; background-color: #eab308; color: #0f172a; font-size: 9px; font-weight: 900; padding: 1px 3px; border-radius: 2px; font-family: 'Share Tech Mono', monospace; z-index: 10;">${backNum}</div>` : ''}
+                            </div>
+
+                            <h3 style="font-size: 11.5px; font-weight: 800; text-transform: uppercase; margin: 8px 0 2px 0; text-align: center; color: #ffffff; z-index: 1; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">${fullName}</h3>
+                            <span style="font-size: 8px; font-weight: bold; background-color: #020617aa; border: 1px solid rgba(255,255,255,0.1); color: ${themeColor}; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; z-index: 1;">${roleOrPos}</span>
+                        </div>
+
+                        <div style="padding: 6px; background-color: #020617; border-top: 1px solid rgba(255,255,255,0.05); text-align: center; position: relative; z-index: 10;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
+                                <div style="text-align: left; flex-grow: 1; min-width: 0;">
+                                    <span style="font-size: 5.5px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: block;">KLUB / SSB</span>
+                                    <span style="font-size: 9px; font-weight: 800; color: #e2e8f0; text-transform: uppercase; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">${clubName}</span>
+                                    <span style="font-size: 6.5px; color: #475569; font-family: monospace; display: block; margin-top: 2px;">REG ID: ${displayRegId}</span>
+                                </div>
+                                ${showQr ? `
+                                <div style="width: 32px; height: 32px; background-color: white; padding: 1.5px; border-radius: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.3)">
+                                    <img src="${qrCodeUrl}" style="width: 100%; height: 100%;">
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // BELAKANG KARTU (KONDISIONAL)
+                if (doubleSided) {
+                    printHtml += `
+                        <div style="width: 215px; height: 330px; ${cutLineBorder} border-radius: 8px; overflow: hidden; background-color: #020617; color: #ffffff; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid; position: relative;">
+                            <div style="background-color: #0f172a; padding: 10px; text-align: center; border-bottom: 2px solid ${themeColor};">
+                                <h4 style="font-size: 8.5px; font-weight: bold; color: ${themeColor}; text-transform: uppercase; margin: 0;">KETENTUAN & KEABSAHAN</h4>
+                            </div>
+
+                            <div style="padding: 15px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; font-size: 7.5px; line-height: 1.4; color: #cbd5e1;">
+                                <p style="margin: 0 0 8px 0; font-weight: bold; color: white; text-align: center; border-bottom: 1px solid #1e293b; padding-bottom: 4px;">TATA TERTIB PESERTA & OFFICIAL</p>
+                                <ol style="margin: 0; padding-left: 12px; space-y: 4px;">
+                                    <li>ID Card ini adalah dokumen resmi yang wajib digunakan dan dipakai selama event / turnamen berlangsung.</li>
+                                    <li>Penggunaan ID Card tidak dapat diwakilkan atau dipindahtangankan kepada orang lain.</li>
+                                    <li>Panitia berhak melakukan verifikasi ulang data fisik dengan mencocokkan kode verifikasi QR Code terdaftar.</li>
+                                    <li>Segala bentuk manipulasi atau pemalsuan ID Card akan ditindak secara tegas melalui diskualifikasi tim.</li>
+                                </ol>
+                            </div>
+
+                            <div style="padding: 10px; background-color: #020617; text-align: center; border-top: 1px solid #1e293b;">
+                                <p style="font-size: 6px; color: #475569; margin: 0; text-transform: uppercase;">MENGESAHKAN,</p>
+                                <p style="font-size: 7.5px; font-weight: bold; color: #e2e8f0; margin: 2px 0 15px 0;">SEKRETARIAT VERIFIKASI DATA</p>
+                                <div style="display: flex; justify-content: space-between; font-size: 6px; color: #475569; border-top: 1px dashed #1e293b; padding-top: 4px;">
+                                    <span>SI-CETAK SPORT PRO</span>
+                                    <span>PANITIA VERIFIKATOR</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            printHtml += `
+                    </div>
+                </div>
+            `;
+
+            printDock.innerHTML = printHtml;
+            
+            // Proses Penjaminan Muat Gambar (QR Code, Foto, & Jersey background)
+            const images = printDock.querySelectorAll("img");
+            let loadedCount = 0;
+            const totalImages = images.length;
+
+            const executeBrowserPrint = () => {
+                // Kembalikan status tombol ke keadaan semula
+                if (btnPrint) {
+                    btnPrint.disabled = false;
+                    btnPrint.innerHTML = originalBtnHtml;
+                    lucide.createIcons();
+                }
+                // Panggil Dialog Cetak PDF Browser
+                window.print();
+                closeIdCardModal();
+            };
+
+            if (totalImages === 0) {
+                executeBrowserPrint();
+                return;
+            }
+
+            // Daftarkan listener pada setiap gambar di dermaga cetak
+            images.forEach(img => {
+                const handleImgLoad = () => {
+                    loadedCount++;
+                    if (loadedCount === totalImages) {
+                        executeBrowserPrint();
+                    }
+                };
+                
+                if (img.complete) {
+                    handleImgLoad();
+                } else {
+                    img.addEventListener("load", handleImgLoad);
+                    img.addEventListener("error", handleImgLoad); // Tangani tautan gambar rusak agar proses tidak macet
+                }
+            });
+        }
+
+    </script>
+</body>
+</html>
