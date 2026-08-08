@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Report: Road To GEAS Nasional 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+        
+        :root {
+            --primary: #1e40af;
+            --accent: #f59e0b;
+            --bg-neutral: #fdfcfb;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-neutral);
+            color: #1f2937;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+
+        .nav-link {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background-color: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .podium-item {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .tab-active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="custom-scroll">
+
+    <!-- Chosen Palette: Grass & Goal (Warm Neutral Background, Deep Blue & Amber accents) -->
+    <!-- Application Structure Plan: 
+        1. Hero Section: Dampak visual instan dengan statistik utama.
+        2. Dashboard Interaktif: Visualisasi distribusi juara menggunakan Chart.js.
+        3. Podium Juara: Tabbed interface untuk melihat detail pemenang U-10 & U-12 secara eksklusif.
+        4. Bintang Lapangan: Grid kartu profil untuk penghargaan individu.
+        5. Galeri Momen: Grid dokumentasi foto dengan fitur preview.
+        WHY: Struktur ini dipilih agar navigasi menjadi intuitif. Pengguna dapat langsung melihat rekapitulasi kemenangan dan beralih ke galeri foto dengan cepat.
+    -->
+    <!-- Visualization & Content Choices: 
+        - Bar Chart: Menggunakan Chart.js untuk menunjukkan distribusi juara (Goal: Compare).
+        - Image Grid: Untuk dokumentasi visual festival (Goal: Inform).
+        - Confirming NO SVG/Mermaid: Menggunakan standar img tags dan CSS styling.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl font-extrabold text-blue-800 tracking-tighter">GEAS<span class="text-amber-500">2026</span></span>
+            </div>
+            <div class="hidden md:flex gap-8 font-semibold text-sm uppercase tracking-wider text-gray-600">
+                <span class="nav-link" onclick="scrollToId('home')">Beranda</span>
+                <span class="nav-link" onclick="scrollToId('stats')">Statistik</span>
+                <span class="nav-link" onclick="scrollToId('winners')">Juara</span>
+                <span class="nav-link" onclick="scrollToId('gallery')">Galeri</span>
+            </div>
+            <button class="bg-blue-700 text-white px-5 py-2 rounded-full text-sm font-bold hover:bg-blue-800 transition">Nasional Championship</button>
+        </div>
+    </nav>
+
+    <main id="home" class="pt-24 pb-12">
+        <!-- Hero Section -->
+        <section class="max-w-7xl mx-auto px-4 mb-16">
+            <div class="flex flex-col items-center text-center mb-12">
+                <span class="bg-amber-100 text-amber-700 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4">Laporan Resmi Festival</span>
+                <h1 class="text-4xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
+                    Road To Geas Nasional <br><span class="text-blue-700">Championship 9</span>
+                </h1>
+                <p class="max-w-2xl text-gray-600 text-lg mb-8 leading-relaxed">
+                    Menelusuri jejak perjuangan talenta muda di Lapangan Putra Mega Arena. Sebuah ajang pembuktian mentalitas juara.
+                </p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl">
+                    <div class="glass-card p-6 rounded-2xl shadow-sm text-center">
+                        <div class="text-3xl font-bold text-blue-700 mb-1">08</div>
+                        <div class="text-xs text-gray-500 uppercase font-bold">Agustus 2026</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl shadow-sm text-center border-t-4 border-amber-400">
+                        <div class="text-3xl font-bold text-blue-700 mb-1">02</div>
+                        <div class="text-xs text-gray-500 uppercase font-bold">Kategori Usia</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl shadow-sm text-center">
+                        <div class="text-3xl font-bold text-blue-700 mb-1">02</div>
+                        <div class="text-xs text-gray-500 uppercase font-bold">Tiket Nasional</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl shadow-sm text-center border-t-4 border-blue-400">
+                        <div class="text-3xl font-bold text-blue-700 mb-1">04</div>
+                        <div class="text-xs text-gray-500 uppercase font-bold">Klub Podium</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section id="stats" class="max-w-7xl mx-auto px-4 mb-20">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <span class="w-2 h-8 bg-amber-500 rounded-full"></span>
+                    Analisis Performa Klub
+                </h2>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div class="glass-card p-8 rounded-3xl shadow-xl flex flex-col justify-center">
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="p-6 bg-white rounded-2xl shadow-sm border-l-4 border-blue-600">
+                        <h4 class="font-bold text-blue-900 mb-2">Dominasi Putra Asgar</h4>
+                        <p class="text-sm text-gray-600">Putra Asgar berhasil mengamankan posisi puncak di kedua kategori (U-10 & U-12).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Winners Section -->
+        <section id="winners" class="bg-gray-100 py-20 px-4">
+            <div class="max-w-7xl mx-auto text-center">
+                <div class="mb-12">
+                    <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Rekapitulasi Podium Kehormatan</h2>
+                    <div class="inline-flex p-1 bg-gray-200 rounded-xl">
+                        <button onclick="switchCategory('u10')" id="btn-u10" class="px-8 py-2 rounded-lg font-bold text-sm transition tab-active">KATEGORI U-10</button>
+                        <button onclick="switchCategory('u12')" id="btn-u12" class="px-8 py-2 rounded-lg font-bold text-sm transition">KATEGORI U-12</button>
+                    </div>
+                </div>
+                <div id="winner-display" class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                    <!-- Dinamis melalui JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Award Stars (Bagian Alternatif untuk Foto Pemain) -->
+        <section class="max-w-7xl mx-auto px-4 py-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Individu Terbaik</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Kartu Best Player -->
+                <div class="p-8 rounded-3xl bg-blue-50 border border-blue-100 text-center relative overflow-hidden group">
+                    <div class="relative z-10">
+                        <div class="w-24 h-24 bg-blue-200 rounded-full mx-auto mb-4 overflow-hidden shadow-lg border-4 border-white">
+                            <!-- MASUKKAN FOTO PEMAIN TERBAIK DI SINI -->
+                            <img src="https://i.ibb.co.com/4RchY276/1.jpg" alt="Ferrel P. Sahril" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-xl font-bold text-blue-900">Best Player U-12 & U-10</h3>
+                        <p class="text-blue-700 font-bold text-lg">Ferrel & Nararya</p>
+                    </div>
+                </div>
+
+                <!-- Kartu Best Keeper -->
+                <div class="p-8 rounded-3xl bg-amber-50 border border-amber-100 text-center relative overflow-hidden group">
+                    <div class="relative z-10">
+                        <div class="w-24 h-24 bg-amber-200 rounded-full mx-auto mb-4 overflow-hidden shadow-lg border-4 border-white">
+                            <!-- MASUKKAN FOTO KIPER TERBAIK DI SINI -->
+                            <img src="https://i.ibb.co.com/4RchY276/1.jpg" alt="U10 & U12" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-xl font-bold text-amber-900">Best Keeper</h3>
+                        <p class="text-amber-700 font-bold text-lg">Fajar U10 & M. Raka P U12</p>
+                    </div>
+                </div>
+
+                <!-- Kartu Top Scorer -->
+                <div class="p-8 rounded-3xl bg-red-50 border border-red-100 text-center relative overflow-hidden group">
+                    <div class="relative z-10">
+                        <div class="w-24 h-24 bg-red-200 rounded-full mx-auto mb-4 overflow-hidden shadow-lg border-4 border-white">
+                            <!-- MASUKKAN FOTO TOP SCORER DI SINI -->
+                            <img src="https://i.ibb.co.com/4RchY276/1.jpg" alt="Top Scorer" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-xl font-bold text-red-900">Top Scorer</h3>
+                        <p class="text-red-700 font-bold text-lg">Bayu (U10) & Fawwaz (U12)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gallery Section (Bagian Utama Foto Kegiatan) -->
+        <section id="gallery" class="bg-gray-900 py-20 px-4 text-white">
+            <div class="max-w-7xl mx-auto">
+                <div class="mb-12">
+                    <h2 class="text-3xl font-extrabold mb-2">Galeri Momen Berharga</h2>
+                    <p class="text-gray-400">.......................</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Foto 1 -->
+                    <div class="group relative aspect-video overflow-hidden rounded-xl cursor-pointer bg-gray-800">
+                        <img src="https://i.ibb.co.com/LXhcwgj5/6.jpg" alt="Ganti Sumber Foto Disini" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                        <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                            <span class="text-xs font-bold">Juara U-12</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Foto 2 -->
+                    <div class="group relative aspect-video overflow-hidden rounded-xl cursor-pointer bg-gray-800">
+                        <img src="https://i.ibb.co.com/Gf8241Sr/5.jpg" alt="Ganti Sumber Foto Disini" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                        <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                            <span class="text-xs font-bold">Juara U-10</span>
+                        </div>
+                    </div>
+
+                    <!-- Foto 3 -->
+                    <div class="group relative aspect-video overflow-hidden rounded-xl cursor-pointer bg-gray-800">
+                        <img src="https://i.ibb.co.com/zTGgz36D/4.jpg" alt="Ganti Sumber Foto Disini" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                        <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                            <span class="text-xs font-bold">Podium Kehormatan</span>
+                        </div>
+                    </div>
+
+                    <!-- Foto 4 -->
+                    <div class="group relative aspect-video overflow-hidden rounded-xl cursor-pointer bg-gray-800">
+                        <img src="https://i.ibb.co.com/35fsvpfF/7.jpg" alt="Ganti Sumber Foto Disini" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                        <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                            <span class="text-xs font-bold">Runner Up U-12</span>
+                        </div>
+                    </div>
+
+                    <!-- Tambahkan lebih banyak kotak foto di bawah ini dengan format yang sama -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-100 py-12 border-t">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-gray-500 text-sm">Hormat Panitia Pelaksana, SSB Putra Asgar</p>
+        </div>
+    </footer>
+
+    <script>
+        const winnersData = {
+            u10: [
+                { rank: 1, name: "Putra Asgar A", note: "Tiket Nasional", color: "bg-blue-600", border: "border-blue-700" },
+                { rank: 2, name: "DS Soccer", note: "Runner Up", color: "bg-gray-500", border: "border-gray-600" },
+                { rank: 3, name: "Putra Mega & Putra Asgar B", note: "Juara 3 Bersama", color: "bg-amber-600", border: "border-amber-700" }
+            ],
+            u12: [
+                { rank: 1, name: "Putra Asgar A", note: "Tiket Nasional", color: "bg-blue-600", border: "border-blue-700" },
+                { rank: 2, name: "Putra Asgar B", note: "Runner Up", color: "bg-gray-500", border: "border-gray-600" },
+                { rank: 3, name: "Putra Mega", note: "Juara 3", color: "bg-amber-600", border: "border-amber-700" }
+            ]
+        };
+
+        function switchCategory(cat) {
+            const display = document.getElementById('winner-display');
+            const data = winnersData[cat];
+            document.getElementById('btn-u10').classList.remove('tab-active');
+            document.getElementById('btn-u12').classList.remove('tab-active');
+            document.getElementById('btn-' + cat).classList.add('tab-active');
+
+            display.innerHTML = data.map(item => `
+                <div class="podium-item glass-card p-6 rounded-3xl border-b-8 ${item.border}">
+                    <div class="flex justify-between mb-4">
+                        <span class="${item.color} text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">${item.rank}</span>
+                        <span class="text-[10px] bg-gray-100 px-2 py-1 rounded font-bold uppercase">${item.note}</span>
+                    </div>
+                    <h4 class="text-lg font-extrabold text-gray-900">${item.name}</h4>
+                </div>
+            `).join('');
+        }
+
+        function scrollToId(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        window.onload = () => {
+            switchCategory('u10');
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Putra Asgar', 'Putra Mega', 'DS Soccer'],
+                    datasets: [{
+                        label: 'Total Podium',
+                        data: [4, 2, 1],
+                        backgroundColor: ['#1e40af', '#f59e0b', '#6b7280'],
+                        borderRadius: 8
+                    }]
+                },
+                options: { maintainAspectRatio: false, responsive: true }
+            });
+        };
+    </script>
+</body>
+</html>
